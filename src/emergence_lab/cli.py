@@ -7,7 +7,7 @@ from pathlib import Path
 
 from emergence_lab.analytics.metrics import metrics_from_run, write_metrics_csv
 from emergence_lab.analytics.statistics import paired_deltas
-from emergence_lab.analytics.summarize import summarize_batch
+from emergence_lab.analytics.summarize import batch_dir_for_compare_out, summarize_batch
 from emergence_lab.config import SimConfig
 from emergence_lab.simulation.runner import run_same_world, run_simulation, unique_run_dir
 from emergence_lab.visualization.gif import comparison_gif, gif_from_run
@@ -75,6 +75,13 @@ def cmd_compare(args: argparse.Namespace) -> None:
         for left, right in zip(controllers, controllers[1:]):
             delta = paired_deltas(rows, "final_population", left, right)
             print(delta.summary())
+    if not args.no_summarize:
+        named_batch = args.out is not None
+        _summarize_and_maybe_publish(
+            batch_dir_for_compare_out(out_root),
+            publish=named_batch and not args.no_publish,
+            quiet=True,
+        )
 
 
 def cmd_gif(args: argparse.Namespace) -> None:
@@ -82,13 +89,44 @@ def cmd_gif(args: argparse.Namespace) -> None:
     print(path)
 
 
-def cmd_summarize(args: argparse.Namespace) -> None:
-    paths = summarize_batch(args.batch_dir, args.out, birth_threshold=args.birth_outlier)
-    print((paths["aggregate"]).read_text(encoding="utf-8"), end="")
+def _summarize_and_maybe_publish(
+    batch_dir: str | Path,
+    *,
+    out: str | Path | None = None,
+    birth_threshold: int = 5,
+    publish: bool = True,
+    reports_dir: str | Path | None = None,
+    lab_log: str | Path | None = None,
+    quiet: bool = False,
+) -> dict[str, Path]:
+    paths = summarize_batch(
+        batch_dir,
+        out,
+        birth_threshold=birth_threshold,
+        publish=publish,
+        reports_dir=reports_dir,
+        lab_log=lab_log,
+    )
+    if not quiet:
+        print((paths["aggregate"]).read_text(encoding="utf-8"), end="")
     print(f"Wrote {paths['aggregate']}")
     print(f"Wrote {paths['all_metrics']}")
     print(f"Wrote {paths['by_controller']}")
     print(f"Wrote {paths['paired_deltas']}")
+    if "report" in paths:
+        print(f"Published {paths['report']}")
+    return paths
+
+
+def cmd_summarize(args: argparse.Namespace) -> None:
+    _summarize_and_maybe_publish(
+        args.batch_dir,
+        out=args.out,
+        birth_threshold=args.birth_outlier,
+        publish=not args.no_publish,
+        reports_dir=args.reports_dir,
+        lab_log=args.lab_log,
+    )
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -116,6 +154,16 @@ def main(argv: list[str] | None = None) -> None:
     compare.add_argument("--out", type=str, default=None)
     compare.add_argument("--gif", action="store_true")
     compare.add_argument("--invariants", action="store_true")
+    compare.add_argument(
+        "--no-summarize",
+        action="store_true",
+        help="Skip rewriting aggregate.md after this seed",
+    )
+    compare.add_argument(
+        "--no-publish",
+        action="store_true",
+        help="Write stats in results/ only; do not copy to experiments/reports/",
+    )
     compare.set_defaults(func=cmd_compare)
 
     gif = sub.add_parser("gif", help="Render a GIF from a stored run (no resimulate)")
@@ -139,6 +187,23 @@ def main(argv: list[str] | None = None) -> None:
         type=int,
         default=5,
         help="List seeds with at least this many births",
+    )
+    summarize.add_argument(
+        "--no-publish",
+        action="store_true",
+        help="Write stats in the batch folder only; do not copy to experiments/reports/",
+    )
+    summarize.add_argument(
+        "--reports-dir",
+        type=str,
+        default=None,
+        help="Override experiments/reports/ (tests and one-off copies)",
+    )
+    summarize.add_argument(
+        "--lab-log",
+        type=str,
+        default=None,
+        help="Override docs/lab_log.md",
     )
     summarize.set_defaults(func=cmd_summarize)
 

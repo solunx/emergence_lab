@@ -98,7 +98,7 @@ Replay and GIFs are built from stored events plus the tick-0 snapshot, not by re
 python -m emergence_lab gif path/to/run_dir
 ```
 
-Batch compare, then a **deterministic** statistical summary from the already-written `metrics.csv` files. This does not resimulate and does not read `events.jsonl`:
+Each `compare` into a `seed_*` folder **rewrites** the parent batch `aggregate.md` (and the three CSV stats files) from `metrics.csv` only — no resimulate, no `events.jsonl`. By default it also **publishes** those four files into git-tracked `experiments/reports/<batch_id>/`. `NOTES.md` and `docs/lab_log.md` are created as stubs if missing and are **never overwritten**.
 
 ```bash
 for s in $(seq 1 100); do
@@ -106,11 +106,13 @@ for s in $(seq 1 100); do
     --experiment-id batch100x1000 \
     --out "experiments/results/batch100x1000/seed_${s}"
 done
-
-python -m emergence_lab summarize experiments/results/batch100x1000
+# Last seed already published the report. Re-run summarize only if you skipped it:
+# python -m emergence_lab summarize experiments/results/batch100x1000
 ```
 
-That writes `aggregate.md`, `all_metrics.csv`, `by_controller.csv`, and `paired_deltas.csv` next to the batch. Hand `aggregate.md` to a model for narrative interpretation; do not re-scan raw runs in chat.
+After the numbers exist, the only manual step is interpretation in `experiments/reports/<batch_id>/NOTES.md` and `docs/lab_log.md`. Do not re-scan raw runs in chat.
+
+Use `--no-summarize` or `--no-publish` on `compare` if you are debugging a single seed. `summarize --no-publish` writes stats next to the batch without touching `reports/`.
 
 C1-R ablation (same world, reproduction on, no genome). Smoke 5–10 seeds first — C1-R can fill the map:
 
@@ -127,12 +129,18 @@ python -m emergence_lab summarize experiments/results/ablation_c1r_100x1000
 
 Then `seq 1 100` when the smoke run looks sane. Compare C1 vs C1-R (reproduction only) and C1-R vs C2 (same births, different decision).
 
+Tracked reports (not raw events): [`docs/lab_log.md`](docs/lab_log.md) and [`experiments/reports/`](experiments/reports/). Economy **m1-v2** is frozen (food +30, regen 15). Next planned batch: 100 seeds × 10000 ticks, C1-R vs C2 — persistence, not more 1000-tick lottery tickets.
+
+Later, if a candidate pattern appears, extra Python tests (permutation, survival curves, genome/lineage on hits) can argue it is not a controller bias. Those are **not** in the default summarize path. Descriptive stats stay automatic; causal claims stay manual.
+
 ## Project layout
 
 ```text
-src/emergence_lab/     simulator, analytics, visualization
-experiments/configs/   YAML configs
-experiments/results/   run outputs (gitignored)
-tests/                 world, invariants, verification controllers, replay
-spec.md                implementation specification
+src/emergence_lab/          simulator, analytics, visualization
+docs/lab_log.md             chronological interpretation (tracked)
+experiments/configs/        YAML configs
+experiments/results/        raw runs (gitignored)
+experiments/reports/        aggregate.md + CSVs + NOTES (tracked)
+tests/                      world, invariants, verification controllers, replay
+spec.md                     implementation specification
 ```

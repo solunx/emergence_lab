@@ -305,7 +305,7 @@ def test_summarize_writes_small_artifacts(tmp_path):
 
 def test_cli_summarize(tmp_path, capsys):
     root = _batch(tmp_path)
-    main(["summarize", str(root)])
+    main(["summarize", str(root), "--no-publish"])
     captured = capsys.readouterr().out
     assert "Alive" in captured
     assert "## Parameters" in captured

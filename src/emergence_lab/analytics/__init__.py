@@ -1,4 +1,5 @@
 from emergence_lab.analytics.metrics import metrics_from_events, metrics_from_run, write_metrics_csv
+from emergence_lab.analytics.report import publish_report
 from emergence_lab.analytics.statistics import PairedDelta, paired_deltas
 from emergence_lab.analytics.summarize import load_metric_rows, summarize_batch
 
@@ -8,6 +9,7 @@ __all__ = [
     "metrics_from_events",
     "metrics_from_run",
     "paired_deltas",
+    "publish_report",
     "summarize_batch",
     "write_metrics_csv",
 ]

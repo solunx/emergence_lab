@@ -9,6 +9,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Iterable
 
+from emergence_lab.analytics.report import publish_report
 from emergence_lab.analytics.statistics import ci95, cohens_d, mean, median, paired_deltas, sd
 from emergence_lab.world.types import N_FEATURES, N_GENOME_WEIGHTS
 
@@ -791,6 +792,10 @@ def summarize_batch(
     batch_dir: str | Path,
     out_dir: str | Path | None = None,
     birth_threshold: int = 5,
+    *,
+    publish: bool = False,
+    reports_dir: str | Path | None = None,
+    lab_log: str | Path | None = None,
 ) -> dict[str, Path]:
     root = Path(batch_dir)
     dest = Path(out_dir) if out_dir else root
@@ -828,9 +833,25 @@ def summarize_batch(
     _write_csv(paired_path, paired_delta_rows(rows))
     markdown = render_aggregate_md(rows, root, birth_threshold=birth_threshold)
     md_path.write_text(markdown, encoding="utf-8")
-    return {
+    paths = {
         "all_metrics": all_path,
         "by_controller": by_path,
         "paired_deltas": paired_path,
         "aggregate": md_path,
     }
+    if publish:
+        paths["report"] = publish_report(
+            dest,
+            reports_dir=reports_dir,
+            lab_log=lab_log,
+            batch_id=root.name,
+        )
+    return paths
+
+
+def batch_dir_for_compare_out(out_root: str | Path) -> Path:
+    """If compare wrote seed_N/, summarize the parent batch folder."""
+    path = Path(out_root)
+    if path.name.startswith("seed_"):
+        return path.parent
+    return path

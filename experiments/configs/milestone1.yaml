@@ -1,0 +1,33 @@
+world:
+  width: 32
+  height: 32
+  torus: true
+  resource_count: 20
+  resource_value: 30
+  regen_delay: 15
+
+population:
+  initial_size: 10
+
+simulation:
+  ticks: 1000
+  snapshot_every: 100
+
+organism:
+  initial_energy: 100
+  base_metabolism: 1
+  movement_cost: 1
+  reproduction_energy_threshold: 150
+  reproduction_cost: 75
+  mutation_probability: 0.05
+  mutation_strength: 0.1
+
+observation:
+  radius: 2
+
+controller:
+  type: random
+
+experiment:
+  seed: 123456
+  experiment_id: milestone1-fast

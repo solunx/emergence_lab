@@ -28,7 +28,11 @@ CONTROLLER_ORDER = (
     "reactive",
     "reactive_r",
     "evolutionary",
+    "evolutionary_oracle",
+    "evolutionary_oracle_r",
     "llm",
+    "llm_a",
+    "llm_b",
     "llm_memory",
     "llm_evolution",
     "llm_evolution_memory",
@@ -52,6 +56,8 @@ NUMERIC_FIELDS = (
     "resources_consumed_count",
     "action_entropy",
     "invalid_action_rate",
+    "llm_calls",
+    "llm_mean_latency_ms",
 )
 
 PRIMARY_METRICS = (
@@ -65,6 +71,7 @@ PRIMARY_METRICS = (
     "mean_population",
     "mean_energy",
     "action_entropy",
+    "invalid_action_rate",
     "time_to_extinction",
     "time_to_extinction_censored",
     "time_to_first_birth",
@@ -100,6 +107,17 @@ PARAM_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
         ("observation_radius", "memory_capacity", "memory_entry_max_chars"),
     ),
     ("Simulation", ("ticks", "snapshot_every", "experiment_id")),
+    (
+        "LLM",
+        (
+            "llm_model",
+            "llm_endpoint",
+            "llm_temperature",
+            "llm_prompt_id",
+            "llm_prompt_version",
+            "llm_num_predict",
+        ),
+    ),
 )
 
 META_VERSION_KEYS = (

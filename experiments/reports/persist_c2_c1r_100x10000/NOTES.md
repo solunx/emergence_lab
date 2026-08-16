@@ -26,6 +26,7 @@ Pre-registered question: do the six C2 hits from 1000 ticks persist, and does C1
 - Not that the ecology is dead (C1-R mean generation 46).
 - Not that more 1000-tick seeds, or 50k ticks, would make typical C2 persist. The mechanism is early failure, not a slow climb.
 - Not genome *direction*. BIRTH events do not log weights; typical C2 has 0–1 births. Seed 3’s generation-8 flash is not a selection time series.
+- Not “evolution cannot copy C1.” C2’s 9 features cannot see diagonal food; C1 can. That confound is still unseparated here.
 
 ## Decision
 

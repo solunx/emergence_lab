@@ -1,8 +1,8 @@
 # Emergence Lab — Implementation Specification v0.2 (frozen)
 
-Dit document is de **normatieve** implementatiespecificatie. Waar dit document een regel vastlegt, mag de code daar niet van afwijken. Onduidelijke “bijvoorbeeld”-keuzes uit v0.1 zijn hier vervangen door harde semantiek.
+Dit document is de **normatieve** implementatiespecificatie. Waar dit document een regel vastlegt, mag de code daar niet van afwijken.
 
-Implementeer eerst alleen **Milestone 1**. Schrijf tests voordat je verdergaat. Bouw geen framework. Wijzig de spec niet verder tot Milestone 1 draait en de eerste werelden zichtbaar zijn.
+Milestone 1 is geïmplementeerd. Milestone 2 begint bij **C3** (lokale LLM via configureerbare Ollama-adapter). Wereldregels van v0.2 blijven frozen (m1-v2). Wijzigingen aan food/regen/C2-features = nieuwe experimentversie.
 
 ---
 
@@ -15,6 +15,8 @@ Bouw een klein, reproduceerbaar experimenteel platform in Python om te onderzoek
 Dezelfde wereld, organismen, observaties, acties en fysica moeten gebruikt kunnen worden met verschillende decision controllers.
 
 De experimentele interventie is de **controllerconfiguratie**. Alle overige wereld- en organismemechanica blijven constant, tenzij expliciet als ablation gedefinieerd. Controllercondities mogen verschillen in controller-interne staat (genome, memory) alleen waar de experimentele matrix dat toestaat.
+
+Controllers krijgen dezelfde **raw** Observation (5×5 + energy + age). Ze gebruiken die niet noodzakelijk hetzelfde. C1 redeneert over de volle lokale geometrie. C2 projecteert naar 9 lineaire features (geen diagonalen, geen afstand, geen eigen energy in het genotype). C3 serialiseert de patch naar een prompt. **Effective representation is onderdeel van de controllerconditie.** Zeg niet dat C1 vs C2 “alleen het decision mechanism” is.
 
 **Reproductie is in de hoofdmatrix geen universele wereldregel.** C2/C5/C6 mogen reproduceren; C0/C1/C3/C4 niet. Dat is een controller-conditieverschil, geen puur decision-mechanism-effect. Interpreteer C2-versus-C0 daarom niet als “alleen de decision function veranderde”. Zie §10.1.
 
@@ -630,6 +632,8 @@ bias       = 1 altijd
 
 Geen diagonalen in de features. `SELF` telt niet als `ORGANISM`. **Eigen energy en age zitten in de observation maar niet in het C2-genotype.** C2 kan daardoor niet evolutionair leren anders te handelen bij energy=5 versus energy=100. Dat is bewust: evolutie binnen een **constrained phenotype space**, niet “evolutie over de raw observation”. Niet verruimen in v0.1. Latere ablation: `C2 + own energy` / densere features.
 
+Daardoor is C1 vs C2 geen zuivere “hand-coded vs evolved” vergelijking op dezelfde informatierijkdom. C1 ziet elke RESOURCE in de 5×5 (inclusief diagonalen) en heeft een ingebouwde food-prior. C2 ziet acht as-bits: N1 en N2 zijn één bit; een patch met alleen diagonale food is feature-identiek aan een lege patch (alleen `bias`). Dat is een handicap én de C2-conditie. **Niet achteraf features toevoegen omdat C2 faalt.** Een latere benoemde conditie (`C2-diag` / densere features) is een nieuwe experimentversie, geen stille spec-fix. Diagnostic in Milestone 1: vast cardinal-oracle-genome over **dezelfde** 9 features (`evolutionary_oracle`), plus een representability-rapport (C1-actie vs die 9 bits). Zie §10.2.
+
 As-conventie in code: documenteer en test één mapping (bijv. row 0 = noord in de 5×5-print) en houd die overal aan.
 
 #### Genome
@@ -673,6 +677,12 @@ Fitness is **niet** expliciet. Selectie ontstaat uit survival, energy en reprodu
 ### 9.4 C3 — LLM
 
 De LLM is uitsluitend een decision function. Adapter-patroon: de simulator kent het model niet. **Modelnaam, endpoint en parameters zijn configureerbaar, nooit hardcoded.**
+
+Config: `llm.model`, `llm.endpoint`, `llm.temperature`, `prompt_id`. CLI: `--llm-model`, `--llm-endpoint`, `--prompt-id`. Default backend is lokaal **Ollama** (`http://127.0.0.1:11434`); andere OpenAI-achtige endpoints mogen later via dezelfde config, nooit een hardcoded modelnaam in de controllerklasse.
+
+Controller-namen: `llm` / `llm_a` (prompt A), `llm_b` (prompt B). Geen genome, geen reproductie. Elke Ollama-tag is een andere `experiment_id`.
+
+Thinking-modellen (o.a. Qwen3.8, R1, QwQ): `think: false` in de request; `<think>`-tags strippen vóór parse. Self-reported rationale ≠ inner reasoning.
 
 Input: Observation + available actions (+ prompt-template uit config).  
 Output: een `Decision` met exact één `action` (plus optioneel `rationale` / bij C4 `memory_write`).
@@ -799,6 +809,25 @@ Vraag die deze ablations beantwoorden:
 > Is het verschil tussen C2 en C0 veroorzaakt door **genetic evolution van de controller**, of door **reproduction / population dynamics** (meer lichamen, meer concurrentie)?
 
 C0-R/C1-R: kind krijgt `controller_condition` van de ouder, geen genome. CLI-namen: `random_r`, `reactive_r`.
+
+### 10.2 Diagnostic: C2 phenotype vs C2 evolution
+
+Niet in de hoofdmatrix. Doel: scheiden of C2 faalt omdat de 9-bit space C1-achtig foerageren niet kan uitdrukken, of omdat random-init + mutatie die phenotype niet vindt.
+
+```text
+evolutionary_oracle     zelfde 9 features en linear argmax als C2;
+                        vast cardinal genome (resource op as → die kant);
+                        geen mutatie, geen reproduction
+evolutionary_oracle_r   zelfde decision class, reproduction aan, geen genome
+```
+
+Het oracle-genome is **geen** fitted kopie van C1 (diagonalen blijven onzichtbaar). Interpretatie:
+
+- oracle ≈ C1 en random-C2 dood → bootstrap-falen in een wél bruikbare cardinal phenotype
+- oracle ≪ C1 (vooral diagonal-only) → representatieplafond; dat is geen reden C2-features in v0.1 te verruimen
+- oracle dood zoals C2 → zelfs de handgezette cardinal policy persist niet
+
+CLI: `python -m emergence_lab representability` (geen batch). Daarna same-world clones op frozen m1-v2, zelfde seeds 1–100.
 
 ---
 
@@ -935,6 +964,8 @@ Ablations na de eerste resultaten, onder andere:
 
 ```text
 C2 vs C0-R vs C0     # genetic evolution vs population dynamics vs baseline
+C2 vs C2-oracle      # random-init evolution vs fixed cardinal phenotype (same 9 features)
+C2-diag / denser features   # later, nieuwe experimentversie; niet v0.1-C2 herschrijven
 C6
  ├── zonder memory   (= C5)
  ├── zonder evolution (= C4)
@@ -1293,7 +1324,11 @@ emergence-lab/
 │   │   ├── reactive.py
 │   │   ├── evolutionary.py
 │   │   ├── llm.py
-│   │   └── memory.py
+│   │   └── memory.py          # C4, nog niet
+│   ├── llm/                   # prompts, parse, Ollama-client (stdlib urllib)
+│   │   ├── prompts.py
+│   │   ├── parse.py
+│   │   └── ollama.py
 │   ├── simulation/
 │   │   ├── engine.py
 │   │   ├── events.py
@@ -1317,7 +1352,7 @@ emergence-lab/
     └── test_verification_controllers.py
 ```
 
-Python 3.11+. Minimale deps voor Milestone 1: pytest, pyyaml, pillow (GIF). LLM-client pas in Milestone 2.
+Python 3.11+. Deps: pytest, pyyaml, pillow (GIF). C3 praat met Ollama via **stdlib urllib**; geen extra LLM-package.
 
 `README.md` moet minstens bevatten:
 
@@ -1399,6 +1434,8 @@ Sanity: AlwaysStay op een patch zonder regen-onder-organisme sterft volgens het 
 
 - C0/C1/C2 geven een `Decision` met een actie uit de action space
 - engine accepteert invalid en valt terug op STAY
+- C3: parse NORTH/SOUTH/EAST/WEST/STAY; garbage → STAY + `INVALID_ACTION`; raw output in `LLM_CALL`
+- C3 tests gebruiken een fake client (geen netwerk)
 
 ### Reproducibility
 
@@ -1475,13 +1512,13 @@ Doel:
 
 ### Milestone 2
 
-- [ ] C3 met configureerbaar model en prompt A
-- [ ] prompt B als ablation
-- [ ] volledige LLM decision traces
+- [x] C3 met configureerbaar model en prompt A
+- [x] prompt B als ablation
+- [x] volledige LLM decision traces (`LLM_CALL`)
 - [ ] C4 memory (list[str], cap 20); write pas zichtbaar op T+1
-- [ ] `Decision.memory_write` / `rationale`
-- [ ] invalid LLM output → STAY
-- [ ] LLM traces inclusief model hash, backend, quantisatie
+- [x] `Decision.memory_write` / `rationale` (velden; C4 write-pad volgt)
+- [x] invalid LLM output → STAY
+- [ ] LLM traces inclusief model hash, backend, quantisatie (backend=ollama, hash/quant null tot `ollama show`)
 - [ ] fast benchmark voor C3/C4
 
 ### Milestone 3

@@ -8,7 +8,7 @@ from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 
-from emergence_lab.config import SimConfig
+from emergence_lab.config import LLM_CONTROLLERS, SimConfig
 from emergence_lab.simulation.engine import Engine, make_controller
 from emergence_lab.simulation.rng import RNGBundle
 from emergence_lab.simulation.snapshots import write_snapshot
@@ -74,7 +74,7 @@ def run_simulation(
     snapshots_dir = out_dir / "snapshots"
     write_snapshot(snapshots_dir / "tick_000000.json", state)
 
-    controller = make_controller(config.controller, rng)
+    controller = make_controller(config.controller, rng, config)
     engine = Engine(state, rng, controller, check_invariants=check_invariants)
     log = engine.run(config.ticks)
     log.write_jsonl(out_dir / "events.jsonl")
@@ -84,20 +84,45 @@ def run_simulation(
     # only at the end here; tick 0 is the pre-run clone. Replay rebuilds the rest.
     write_snapshot(snapshots_dir / f"tick_{config.ticks:06d}.json", engine.state)
 
+    llm = config.controller in LLM_CONTROLLERS
     metadata = {
         "experiment_id": config.experiment_id,
         "run_id": out_dir.name,
         "seed": config.seed,
         "controller_type": config.controller,
-        "controller_version": "m1-v1",
+        "controller_version": "m2-c3-v1" if llm else "m1-v1",
         "world_version": "m1-v1",
         "config_version": "0.2",
         "git_commit": git_commit(),
+        "prompt_id": config.llm_prompt_id if llm else None,
+        "prompt_version": config.llm_prompt_version if llm else None,
+        "model_name": config.llm_model if llm else None,
+        "model_file_hash": None,
+        "quantization": None,
+        "inference_backend": "ollama" if llm else None,
+        "cuda_version": None,
+        "runtime_version": None,
+        "model_parameters": (
+            {
+                "endpoint": config.llm_endpoint,
+                "temperature": config.llm_temperature,
+                "num_predict": config.llm_num_predict,
+                "timeout_s": config.llm_timeout_s,
+            }
+            if llm
+            else None
+        ),
         "ticks": config.ticks,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "event_log_sha256": log.sha256(),
         "config": config.to_dict(),
-        "determinism_notes": "Non-LLM controllers are bit-identical given code+config+seed.",
+        "determinism_notes": (
+            "LLM runs are reproducible only under identical weights, quantization, "
+            "backend, runtime, hardware, and sampling; temperature=0 is not bit-identical "
+            "across engines."
+            if llm
+            else "Non-LLM controllers are bit-identical given code+config+seed."
+        ),
         "founders": engine.founders,
         "births": engine.births,
         "deaths": engine.deaths,

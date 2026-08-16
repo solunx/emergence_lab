@@ -64,6 +64,7 @@ def apply_event(state: WorldState, event: dict[str, Any]) -> None:
         "MOVE_CONFLICT",
         "INVALID_ACTION",
         "MEMORY_WRITE",
+        "LLM_CALL",
     }:
         return
 

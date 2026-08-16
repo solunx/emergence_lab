@@ -11,6 +11,8 @@ class Decision:
     action: Action
     memory_write: str | None = None
     rationale: str | None = None
+    invalid: bool = False
+    llm_trace: dict | None = None
 
 
 class Controller:

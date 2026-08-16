@@ -11,15 +11,13 @@ A visually interesting GIF is not evidence of emergence.
 | Item | Value |
 |---|---|
 | Frozen economy | **m1-v2**: food `+30`, `regen_delay=15` |
-| Do not retune | food value, regen, reproduction threshold, C2 mutation, C2 genome init |
-| Completed | `batch100x1000`; `ablation_c1r_100x1000`; `persist_c2_c1r_100x10000`; **`ablation_c0r_100x1000`** |
-| C0-R @1000 | **0% alive**; 6% exactly one birth; never generation 2 |
-| C1-R @1000 | 95% alive; mean max gen 7.17 (clone of prior ablation) |
-| C2 | 32% any-birth @1000; **0% alive @10000** |
-| Next | **C3** on frozen world (milestone 2), or write-up |
-| Not next | more C2 seeds; longer C2 ticks; retuning C2 |
+| Do not retune | food, regen, threshold, C2 mutation, C2 genome init, **C2 feature set** |
+| Completed | M1 matrix + R-ablations + 10k persist + C2 oracle diagnostics + **C3 adapter (Ollama)** |
+| C2 why | (1) 9-bit ceiling vs C1 (oracle 32% alive vs C1 97%); (2) bootstrap (C2 32% any-birth vs oracle_r 96%); (3) even oracle_r is weak (17% alive vs C1-R 95%) |
+| Next | **C3-A smoke** on frozen world (`qwen2.5:7b` or `llama3.1:8b`, 1 seed × 50 ticks), then small N. Model variants (incl. `qwen3.8:27b` Q4) are separate `experiment_id`s |
+| Not next | more C2 seeds; expanding C2 features in place; 100-seed 32B C3; C4 before C3-A smoke |
 
-C0-R is dead like C0. Reproduction is not the missing ingredient; foraging is. M1 C0/C1/C2 ablations are done.
+C2 fails because the phenotype cannot be C1 **and** random-init evolution rarely finds even the cardinal policy that *is* in the space. That is a result, not a reason to retune C2.
 
 ---
 
@@ -34,7 +32,7 @@ When that moment comes:
 3. **Bootstrap CI** on the rare-event rate (C2 alive%, any-birth%) — binomial, not normal Cohen’s *d*.
 4. **Ablation already in the design:** C1-R vs C2 holds the birth rule fixed. Any emergence claim must survive that contrast, plus C0-R if random walk plus births is the next confound.
 5. **Lineage / genome on hits only:** max generation, founder share of births, genome distance from init, whether late descendants still look like C1-greedy in the 9×5 weights. One birth ≠ evolution.
-6. **Representability check:** can the C1 greedy policy be expressed (approximately) in C2’s linear genome? If yes, “C2 discovered food-seeking” is a weak claim.
+6. **Representability check:** implemented as `python -m emergence_lab representability` plus `evolutionary_oracle`. C1 greedy is **not** fully expressible in C2’s 9 bits (diagonal food is invisible). Do this *before* claiming C2 failed at evolution.
 7. **Energy-budget reconstruction** from events on hit seeds (occupancy invariants already exist; a global energy ledger does not).
 8. **Multiple-testing hygiene:** pre-register the metric (e.g. persistence of pop>0 past tick 5000 on the same 100 maps) before fishing in outlier GIFs.
 
@@ -51,6 +49,18 @@ We already moved the economy once (food 20/delay 25 → **30/15**) because a har
 More seeds at 1000 ticks estimate the same 6% flash rate more tightly. They are not new starting physics. Seeds 1–100 already vary map layout and founder genomes; that is the start-position sample we have.
 
 **Genome direction is not yet measured.** BIRTH events log parent/child ids and generation, not weights. Snapshots store genomes of whoever is alive at snapshot ticks (`snapshot_every=100`). Replay currently reconstructs births with `genome=None`. There is no lineage-weight time series in `summarize`. Typical C2 has 0–1 births, so there is no multi-generation trajectory to analyze. Seed 3 reached generation 8 and died at tick 1423 — that flash is the only plausible case study, and only after a lineage actually persists would directional selection vs mutation noise be a fair test.
+
+---
+
+## Method note — C1 vs C2 effective representation
+
+C1 and C2 receive the same raw 5×5. C1 scans every RESOURCE cell (diagonals included) and steps to reduce Manhattan distance; food is an explicit prior. C2 is linear argmax over 9 features: resource/organism bits on the four cardinal rays (two cells each, OR’d into one bit) plus bias. Consequences:
+
+- Food due north/south/east/west is visible; food only on a diagonal is **not** (feature vector identical to empty).
+- Distance 1 vs 2 on an axis is lost.
+- Empty patch: C1 samples a uniform random action. C2 uses bias weights; with the diagnostic oracle those are 0 so all five actions tie (also uniform). Random-init C2 usually has a preferred action, not a wander.
+
+This is specified, not a bug. It means C2-failure is not yet “evolution cannot find C1.” It may be “this phenotype cannot see what C1 sees,” or “evolution cannot find the cardinal phototaxis that *is* in the space,” or both. Diagnostic: `representability` CLI + `evolutionary_oracle` on frozen m1-v2. A later `C2-diag` with extra diagonal bits would be a **new** experiment version. Do not edit the v0.1 C2 feature list to rescue the 0/100 persistence result.
 
 ---
 
@@ -147,4 +157,42 @@ More seeds at 1000 ticks estimate the same 6% flash rate more tightly. They are 
 
 - **C0-R births:** seeds 7, 26, 48, 55, 86, 94 — one child each, then extinct. C1-R matches `ablation_c1r_100x1000` exactly.
 - **Interpretation:** births without foraging do not make a population. C2’s 32% any-birth is better than C0-R’s 6% (the linear genome is not a random walk) and still does not persist. C1-R’s ecology is greedy+births, not “the world hands you generations.”
-- **Decision:** M1 C0/C1/C2 ablations are done. Freeze stands. Next is C3 on this world, or write-up.
+- **Decision:** M1 C0/C1/C2 ablations are done. Freeze stands. Next is C2 representability + cardinal oracle (`evolutionary_oracle`) on the same maps — not C3 yet, not expanding C2 features.
+
+---
+
+## 2026-08-16 — `diag_c2_oracle_100x1000`
+
+- **Git:** `823cc1aa23329d56ac86709cad5ec9167013d16b`
+- **Report:** [experiments/reports/diag_c2_oracle_100x1000/](../experiments/reports/diag_c2_oracle_100x1000/)
+- **Design:** seeds 1–100, 1000 ticks, **C1 / C2-oracle / C2**. Oracle = same 9 features, fixed cardinal genome, no births.
+- **Headline:** C1 97% alive / food 276; oracle **32%** / food **89**; C2 6% / food 25. Oracle pop `{0:68, 1:30, 2:2}`.
+- **Interpretation:** a hand-set cardinal policy forages better than random-init C2 and is not C1. Representability (on-axis 100%, diagonal ~20%) costs persistence. Do not expand C2 features in v0.1.
+
+---
+
+## 2026-08-16 — `diag_c2_oracle_r_100x1000`
+
+- **Git:** `823cc1aa23329d56ac86709cad5ec9167013d16b`
+- **Report:** [experiments/reports/diag_c2_oracle_r_100x1000/](../experiments/reports/diag_c2_oracle_r_100x1000/)
+- **Design:** same maps, **C1-R / C2-oracle_r / C2** (births on for oracle_r and C2).
+- **Headline:** C1-R 95% alive, gen 7.2, births 38; oracle_r **17%** alive, **96%** any-birth, gen **3.0**, births 8.1; C2 6% / 32% any-birth.
+- **Interpretation:** oracle_r *starts* lineages (96%) but they collapse (83% extinct). Random-init C2 rarely even starts (32% vs 96%). C2 failure is **representation ceiling + bootstrap**, stacked. Next is C3-A, not a silent C2-diag feature patch.
+
+---
+
+## 2026-08-16 — C3 adapter implemented (no C3 numbers yet)
+
+- **What landed:** `llm` / `llm_a` / `llm_b` controllers, Ollama HTTP client (stdlib), prompt A/B from `emergence_lab.llm.prompts` (not the controller class), `LLM_CALL` traces, invalid → STAY, CLI `--llm-model` / `--llm-endpoint` / `--prompt-id`. Config example: `experiments/configs/c3_ollama.yaml`.
+- **Not landed:** C4 memory writes; no live Ollama batch in this log yet.
+- **Rule:** model tag is part of the experiment identity. Variants (7B vs 14B vs `qwen3.8:27b`) are different batches, not a silent swap.
+- **First command:** smoke `c3a_qwen25_7b_smoke` with `--seeds 1 --ticks 50 --controllers random,reactive,llm --llm-model qwen2.5:7b`. Survival is not the only metric.
+- **Qwen3.8 on RTX 3090:** pull `qwen3.8:27b` (Q4_K_M ~18 GB) when ready; wait for community quant notes if you want, but that default is the 24 GB fit. Do not start C3-A on 32B.
+
+
+## 2026-08-16 — `c3a_qwen25_7b_smoke`
+
+- **Git:** `823cc1aa23329d56ac86709cad5ec9167013d16b`
+- **Report:** [experiments/reports/c3a_qwen25_7b_smoke/](experiments/reports/c3a_qwen25_7b_smoke/)
+- **Numbers:** generated by `summarize` (see `aggregate.md`)
+- **Interpretation:** pending (edit this entry and `experiments/reports/c3a_qwen25_7b_smoke/NOTES.md`)

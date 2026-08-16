@@ -30,4 +30,6 @@ Question: is C1-R’s multi-generation ecology “births exist”, or “greedy 
 
 Keep m1-v2 frozen. The M1 C0/C1/C2 ablation story is complete: greedy without births survives; random with births dies; greedy with births runs generations; C2 flashes and dies.
 
-Do not add seeds or ticks for C2. Next matrix cell is **C3** (LLM, no memory, no reproduction) on this frozen world — milestone 2 — or stop and write up. Do not hunt food/mutation/init.
+C1 vs C2 still mixes a food prior, full 5×5 geometry, and evolution in a 9-bit cardinal bottleneck. Do not add diagonal features to C2 because it failed.
+
+Next: `python -m emergence_lab representability`, then `diag_c2_oracle_100x1000` (`reactive,evolutionary_oracle,evolutionary`). C3 after that diagnostic. Do not hunt food/mutation/init.

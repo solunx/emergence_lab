@@ -3,10 +3,16 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from dataclasses import replace
 
 from emergence_lab.config import DECISION_CONTROLLER, SimConfig
 from emergence_lab.controllers.base import Controller, Decision
-from emergence_lab.controllers.evolutionary import EvolutionaryController, mutate_genome
+from emergence_lab.controllers.evolutionary import (
+    EvolutionaryController,
+    EvolutionaryOracleController,
+    mutate_genome,
+)
+from emergence_lab.controllers.llm import LlmController
 from emergence_lab.controllers.random import RandomController
 from emergence_lab.controllers.reactive import ReactiveController
 from emergence_lab.controllers.verification import AlwaysNorthController, AlwaysStayController
@@ -18,17 +24,36 @@ from emergence_lab.world.types import ALL_ACTIONS, Action
 from emergence_lab.world.world import WorldState
 
 
-def make_controller(name: str, rng_bundle: RNGBundle) -> Controller:
+def make_controller(
+    name: str,
+    rng_bundle: RNGBundle,
+    config: SimConfig | None = None,
+) -> Controller:
     mapping: dict[str, type[Controller]] = {
         "random": RandomController,
         "reactive": ReactiveController,
         "evolutionary": EvolutionaryController,
+        "evolutionary_oracle": EvolutionaryOracleController,
         "always_stay": AlwaysStayController,
         "always_north": AlwaysNorthController,
+        "llm": LlmController,
     }
     decision = DECISION_CONTROLLER.get(name, name)
     if decision not in mapping:
         raise ValueError(f"unknown controller: {name}")
+    if decision == "llm":
+        if config is None:
+            raise ValueError("LLM controller requires SimConfig")
+        if name != config.controller:
+            config = replace(
+                config,
+                controller=name,
+                llm_prompt_id=None if name in {"llm_a", "llm_b"} else config.llm_prompt_id,
+                reproduction_enabled=None,
+                genome_enabled=None,
+            )
+            config.__post_init__()
+        return LlmController(config)
     cls = mapping[decision]
     if decision in {"always_stay", "always_north"}:
         return cls()
@@ -84,19 +109,29 @@ class Engine:
             memory = list(org.memory) if org.memory else None
             decision = self.controller.decide(obs, genome=genome, memory=memory)
             decisions[org.id] = decision
+            if decision.llm_trace:
+                self.log.emit(
+                    "LLM_CALL",
+                    tick,
+                    **decision.llm_trace,
+                    organism_id=org.id,
+                    observation=obs.to_dict(),
+                    memory=memory,
+                    genome=list(genome) if genome is not None else None,
+                )
 
         intended: dict[int, tuple[int, int]] = {}
         moved: dict[int, bool] = {}
         for org in living:
             decision = decisions[org.id]
             action = decision.action
-            valid = action in ALL_ACTIONS
+            valid = (not decision.invalid) and action in ALL_ACTIONS
             if not valid:
                 self.log.emit(
                     "INVALID_ACTION",
                     tick,
                     organism_id=org.id,
-                    raw=str(action),
+                    raw=str(action.value if isinstance(action, Action) else action),
                     fallback="STAY",
                 )
                 action = Action.STAY

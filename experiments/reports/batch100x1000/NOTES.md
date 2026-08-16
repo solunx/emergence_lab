@@ -10,7 +10,7 @@ A visually interesting GIF is not evidence of emergence.
 
 First 100-seed matrix on frozen economy **m1-v2** (food +30, regen 15). Same-world clones of C0, C1, C2. Seeds 1–100, 1000 ticks. Reproduction only on C2. `git_commit` is empty on these result files (pre-repo).
 
-C2 vs C0/C1 is **not** “decision function only.” C2 may birth; C0 and C1 may not.
+C2 vs C0/C1 is **not** “decision function only.” C2 may birth; C0 and C1 may not. They also do not share effective perception: C1 uses the full 5×5; C2 uses 9 cardinal features (no diagonals).
 
 `time_to_first_birth` / `max_generation` are blank in this batch’s `metrics.csv` (those columns were added after the run). Birth counts and the C2 histogram are still valid. Generation numbers for C2 come from `ablation_c1r_100x1000`, whose C2 clones are identical.
 

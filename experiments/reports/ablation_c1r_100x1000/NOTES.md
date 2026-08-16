@@ -23,7 +23,7 @@ This is the ablation that `batch100x1000` could not do: hold the birth rule fixe
 
 ## What they do not show
 
-- Not that C2 genomes are “worse intelligence.” They are random-init linear argmax policies that usually do not harvest.
+- Not that C2 genomes are “worse intelligence.” They are random-init linear argmax policies that usually do not harvest, over a **narrower** feature set than C1 (no diagonal food).
 - Not that one C2 birth is evolution. 22/32 birthing C2 seeds have exactly one birth.
 - Not that 1000 more seeds would flip the typical outcome. They would estimate the 6% rate more tightly and collect more hits.
 - Not persistence: 1000 ticks does not say whether seed 3’s pop 7 is a flash or a lineage that lasts.

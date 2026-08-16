@@ -7,6 +7,7 @@ from pathlib import Path
 
 from emergence_lab.analytics.metrics import metrics_from_run, write_metrics_csv
 from emergence_lab.analytics.statistics import paired_deltas
+from emergence_lab.analytics.representability import render_report
 from emergence_lab.analytics.summarize import batch_dir_for_compare_out, summarize_batch
 from emergence_lab.batch import parse_controllers, parse_seed_spec, seed_is_complete
 from emergence_lab.config import SimConfig
@@ -17,24 +18,43 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RESULTS = ROOT / "experiments" / "results"
 
 
-def _config_from_args(args: argparse.Namespace) -> SimConfig:
+def _apply_llm_args(config: SimConfig, args: argparse.Namespace) -> None:
+    if getattr(args, "llm_model", None):
+        config.llm_model = args.llm_model
+    if getattr(args, "llm_endpoint", None):
+        config.llm_endpoint = args.llm_endpoint
+    if getattr(args, "llm_temperature", None) is not None:
+        config.llm_temperature = args.llm_temperature
+    if getattr(args, "prompt_id", None):
+        config.llm_prompt_id = args.prompt_id
+    if getattr(args, "llm_timeout", None) is not None:
+        config.llm_timeout_s = args.llm_timeout
+    if getattr(args, "llm_num_predict", None) is not None:
+        config.llm_num_predict = args.llm_num_predict
+
+
+def _config_from_args(args: argparse.Namespace, *, seed: int | None = None) -> SimConfig:
+    seed_val = seed if seed is not None else getattr(args, "seed", 123456)
+    controller = getattr(args, "controller", None) or "random"
+    experiment_id = getattr(args, "experiment_id", None) or "milestone1"
+    ticks = args.ticks
     config = SimConfig(
-        seed=args.seed,
-        ticks=args.ticks,
-        controller=args.controller,
-        experiment_id=args.experiment_id,
+        seed=seed_val,
+        ticks=ticks,
+        controller=controller,
+        experiment_id=experiment_id,
     )
     if args.config:
         config = SimConfig.from_yaml(args.config)
-        if args.seed is not None:
-            config.seed = args.seed
-        if args.ticks is not None:
-            config.ticks = args.ticks
-        if args.controller is not None:
+        config.seed = seed_val
+        config.ticks = ticks
+        config.experiment_id = experiment_id
+        if getattr(args, "controller", None):
             config.controller = args.controller
-            config.reproduction_enabled = None
-            config.genome_enabled = None
-            config.__post_init__()
+    _apply_llm_args(config, args)
+    config.reproduction_enabled = None
+    config.genome_enabled = None
+    config.__post_init__()
     return config
 
 
@@ -121,19 +141,11 @@ def cmd_batch(args: argparse.Namespace) -> None:
             skipped += 1
             continue
         print(f"[{index}/{len(seeds)}] seed {seed}")
-        config = SimConfig(
-            seed=seed,
-            ticks=args.ticks,
-            experiment_id=experiment_id,
-        )
-        if args.config:
-            config = SimConfig.from_yaml(args.config)
-            config.seed = seed
-            config.ticks = args.ticks
-            config.experiment_id = experiment_id
-            config.reproduction_enabled = None
-            config.genome_enabled = None
-            config.__post_init__()
+        config = _config_from_args(args, seed=seed)
+        config.experiment_id = experiment_id
+        config.reproduction_enabled = None
+        config.genome_enabled = None
+        config.__post_init__()
         run_compare_seed(
             config,
             controllers,
@@ -151,6 +163,10 @@ def cmd_batch(args: argparse.Namespace) -> None:
             quiet=True,
         )
     print(f"batch {experiment_id}: ran={ran} skipped={skipped} seeds={len(seeds)} out={out_root}")
+
+
+def cmd_representability(args: argparse.Namespace) -> None:
+    print(render_report(repeats=args.repeats), end="")
 
 
 def cmd_gif(args: argparse.Namespace) -> None:
@@ -198,6 +214,31 @@ def cmd_summarize(args: argparse.Namespace) -> None:
     )
 
 
+def _add_llm_flags(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--llm-model",
+        type=str,
+        default=None,
+        help="Ollama tag, e.g. qwen2.5:7b. Required for llm/llm_a/llm_b. Never hardcoded.",
+    )
+    parser.add_argument(
+        "--llm-endpoint",
+        type=str,
+        default=None,
+        help="Ollama HTTP endpoint (default http://127.0.0.1:11434)",
+    )
+    parser.add_argument(
+        "--prompt-id",
+        type=str,
+        default=None,
+        choices=["llm_a", "llm_b"],
+        help="Prompt A (minimal) or B (survival). llm_b controller forces B.",
+    )
+    parser.add_argument("--llm-temperature", type=float, default=None)
+    parser.add_argument("--llm-timeout", type=float, default=None, help="Seconds per LLM call")
+    parser.add_argument("--llm-num-predict", type=int, default=None)
+
+
 def _add_compare_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--config", type=str, default=None)
     parser.add_argument("--ticks", type=int, default=200)
@@ -214,6 +255,7 @@ def _add_compare_flags(parser: argparse.ArgumentParser) -> None:
         action="store_true",
         help="Write stats in results/ only; do not copy to experiments/reports/",
     )
+    _add_llm_flags(parser)
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -229,9 +271,10 @@ def main(argv: list[str] | None = None) -> None:
     run.add_argument("--out", type=str, default=None)
     run.add_argument("--gif", action="store_true")
     run.add_argument("--invariants", action="store_true")
+    _add_llm_flags(run)
     run.set_defaults(func=cmd_run)
 
-    compare = sub.add_parser("compare", help="Same-world clones of C0/C1/C2")
+    compare = sub.add_parser("compare", help="Same-world clones of listed controllers")
     _add_compare_flags(compare)
     compare.add_argument("--seed", type=int, default=123456)
     compare.add_argument("--controller", type=str, default="random")
@@ -268,6 +311,13 @@ def main(argv: list[str] | None = None) -> None:
         help="Re-run seeds that already have metrics.csv",
     )
     batch.set_defaults(func=cmd_batch)
+
+    represent = sub.add_parser(
+        "representability",
+        help="C1 vs C2-feature diagnostic (no resimulate of a batch)",
+    )
+    represent.add_argument("--repeats", type=int, default=20)
+    represent.set_defaults(func=cmd_representability)
 
     gif = sub.add_parser("gif", help="Render a GIF from a stored run (no resimulate)")
     gif.add_argument("run_dir")

@@ -98,38 +98,21 @@ Replay and GIFs are built from stored events plus the tick-0 snapshot, not by re
 python -m emergence_lab gif path/to/run_dir
 ```
 
-Each `compare` into a `seed_*` folder **rewrites** the parent batch `aggregate.md` (and the three CSV stats files) from `metrics.csv` only — no resimulate, no `events.jsonl`. By default it also **publishes** those four files into git-tracked `experiments/reports/<batch_id>/`. `NOTES.md` and `docs/lab_log.md` are created as stubs if missing and are **never overwritten**.
+One command runs a seed range, creates folders, writes stats, and publishes reports. Interrupted batches **resume** (skip `seed_N` if `metrics.csv` exists). After the numbers exist, the only manual step is interpretation in `NOTES.md` and `docs/lab_log.md`.
 
 ```bash
-for s in $(seq 1 100); do
-  python -m emergence_lab compare --seed "$s" --ticks 1000 \
-    --experiment-id batch100x1000 \
-    --out "experiments/results/batch100x1000/seed_${s}"
-done
-# Last seed already published the report. Re-run summarize only if you skipped it:
-# python -m emergence_lab summarize experiments/results/batch100x1000
+python -m emergence_lab batch \
+  --experiment-id ablation_c0r_100x1000 \
+  --seeds 1-100 \
+  --ticks 1000 \
+  --controllers random,random_r,reactive_r
 ```
 
-After the numbers exist, the only manual step is interpretation in `experiments/reports/<batch_id>/NOTES.md` and `docs/lab_log.md`. Do not re-scan raw runs in chat.
+That writes `experiments/results/<experiment-id>/seed_N/` (gitignored) and copies `aggregate.md` plus CSVs into `experiments/reports/<experiment-id>/`. Stubs for `NOTES.md` and the lab log are created if missing and **never overwritten**.
 
-Use `--no-summarize` or `--no-publish` on `compare` if you are debugging a single seed. `summarize --no-publish` writes stats next to the batch without touching `reports/`.
+Use `--seeds 1-5` as a smoke run first. `--force` re-runs a seed that already has metrics. `--no-publish` keeps stats next to the batch only. Single-seed debug remains `compare`.
 
-C1-R ablation (same world, reproduction on, no genome). Smoke 5–10 seeds first — C1-R can fill the map:
-
-```bash
-mkdir -p experiments/results/ablation_c1r_100x1000
-for s in $(seq 1 5); do
-  python -m emergence_lab compare --seed "$s" --ticks 1000 \
-    --controllers reactive,reactive_r,evolutionary \
-    --experiment-id ablation_c1r_100x1000 \
-    --out "experiments/results/ablation_c1r_100x1000/seed_${s}"
-done
-python -m emergence_lab summarize experiments/results/ablation_c1r_100x1000
-```
-
-Then `seq 1 100` when the smoke run looks sane. Compare C1 vs C1-R (reproduction only) and C1-R vs C2 (same births, different decision).
-
-Tracked reports (not raw events): [`docs/lab_log.md`](docs/lab_log.md) and [`experiments/reports/`](experiments/reports/). Economy **m1-v2** is frozen (food +30, regen 15). Next planned batch: 100 seeds × 10000 ticks, C1-R vs C2 — persistence, not more 1000-tick lottery tickets.
+Tracked reports: [`docs/lab_log.md`](docs/lab_log.md) and [`experiments/reports/`](experiments/reports/). Economy **m1-v2** is frozen (food +30, regen 15). M1 C0/C1/C2 ablations are done. Next matrix cell is C3 on this frozen world (milestone 2), or a write-up — not more C2 lottery tickets, not retuning food.
 
 Later, if a candidate pattern appears, extra Python tests (permutation, survival curves, genome/lineage on hits) can argue it is not a controller bias. Those are **not** in the default summarize path. Descriptive stats stay automatic; causal claims stay manual.
 

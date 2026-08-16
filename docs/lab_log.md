@@ -6,19 +6,20 @@ A visually interesting GIF is not evidence of emergence.
 
 ---
 
-## Status (2026-08-15)
+## Status (2026-08-16)
 
 | Item | Value |
 |---|---|
 | Frozen economy | **m1-v2**: food `+30`, `regen_delay=15` |
 | Do not retune | food value, regen, reproduction threshold, C2 mutation, C2 genome init |
-| Completed | `batch100x1000` (C0/C1/C2); `ablation_c1r_100x1000` (C1/C1-R/C2) |
-| C2 at 1000 ticks | ~6% alive, ~32% any-birth; 68/100 never birth; 22/100 exactly one birth |
-| C2 survivors (1000 ticks) | seeds **3, 16, 40, 88, 92, 99** |
-| Next run | **`persist_c2_c1r_100x10000`** — same seeds 1–100, **10000 ticks**, controllers `reactive_r,evolutionary` |
-| Not next | thousands of extra 1000-tick seeds as an “emergence” run |
+| Completed | `batch100x1000`; `ablation_c1r_100x1000`; `persist_c2_c1r_100x10000`; **`ablation_c0r_100x1000`** |
+| C0-R @1000 | **0% alive**; 6% exactly one birth; never generation 2 |
+| C1-R @1000 | 95% alive; mean max gen 7.17 (clone of prior ablation) |
+| C2 | 32% any-birth @1000; **0% alive @10000** |
+| Next | **C3** on frozen world (milestone 2), or write-up |
+| Not next | more C2 seeds; longer C2 ticks; retuning C2 |
 
-**Why not 1000 seeds × 1000 ticks as the first emergence run.** Extra lottery tickets tighten the 6% survival CI and yield more case-study hits. They do not change the typical C2 trajectory (dead by ~tick 130 with zero or one birth). Persistence of the six hits, and whether C1-R stays stable on the same maps, needs **time**, not more seeds.
+C0-R is dead like C0. Reproduction is not the missing ingredient; foraging is. M1 C0/C1/C2 ablations are done.
 
 ---
 
@@ -38,6 +39,18 @@ When that moment comes:
 8. **Multiple-testing hygiene:** pre-register the metric (e.g. persistence of pop>0 past tick 5000 on the same 100 maps) before fishing in outlier GIFs.
 
 Until a candidate appears, do not implement this list. Keep observing.
+
+---
+
+## Method note — freeze vs fine-tuning
+
+The research question is: **same frozen world, swap the controller.** It is not “search start parameters until C2 looks like life.”
+
+We already moved the economy once (food 20/delay 25 → **30/15**) because a harvest cycle was energy-negative and C2 *could not* reach the birth threshold even in principle. The freeze rule is: tune until reproduction is *possible* (C1-R demonstrated that), then stop. Scanning more seeds, other food values, other mutation rates, or other genome inits to find a universe where C2 persists is a **different experiment** (world sensitivity / fine-tuning), and each change is a new version. Do not do that to rescue C2.
+
+More seeds at 1000 ticks estimate the same 6% flash rate more tightly. They are not new starting physics. Seeds 1–100 already vary map layout and founder genomes; that is the start-position sample we have.
+
+**Genome direction is not yet measured.** BIRTH events log parent/child ids and generation, not weights. Snapshots store genomes of whoever is alive at snapshot ticks (`snapshot_every=100`). Replay currently reconstructs births with `genome=None`. There is no lineage-weight time series in `summarize`. Typical C2 has 0–1 births, so there is no multi-generation trajectory to analyze. Seed 3 reached generation 8 and died at tick 1423 — that flash is the only plausible case study, and only after a lineage actually persists would directional selection vs mutation noise be a fair test.
 
 ---
 
@@ -94,6 +107,44 @@ Until a candidate appears, do not implement this list. Keep observing.
 
 - Raw `experiments/results/` stays gitignored.
 - Tracked copies: `experiments/reports/<batch_id>/{aggregate.md, all_metrics.csv, by_controller.csv, paired_deltas.csv}`.
-- `summarize` publishes those files after every batch (also after each `compare` into `seed_*`).
+- `summarize` publishes those files after every batch (also after each `compare` into `seed_*`, and after `batch`).
 - `NOTES.md` and this log are **not** overwritten. Summarize only creates a stub if the batch id is new.
 - LLM / human work after a run: read `aggregate.md`, write interpretation in `NOTES.md` and this log.
+
+---
+
+## 2026-08-15 — `persist_c2_c1r_100x10000`
+
+- **Git:** `0deb1f9c08314363dcf9643f6348fdb8d6c1d8a8`
+- **Report:** [experiments/reports/persist_c2_c1r_100x10000/](../experiments/reports/persist_c2_c1r_100x10000/)
+- **Design:** seeds 1–100, 10000 ticks, clones of **C1-R / C2**. Same maps as the 1000-tick batches. Economy m1-v2 frozen.
+- **Headline:**
+
+| Controller | Alive | Any birth | Mean pop | Mean births | Mean max gen | Med TTE (extinct) |
+|---|---:|---:|---:|---:|---:|---:|
+| C1-R | 68% | 99% | 6.28 | 332 | 46.0 | 4107 (n=32) |
+| C2 | 0% | 32% | 0 | 1.15 | 0.53 | 134 |
+
+- **C2 hits from 1000 ticks, all dead:** 3@1423 (29 births, gen 8), 16@1446, 40@1280, 88@1089, 92@1946 (longest), 99@1252. No new seeds enter the birth loop after tick 1000.
+- **Interpretation:** 6% alive at 1000 was a mid-flash, not persistence. C2’s typical trajectory is death ~tick 130 with 0–1 births. C1-R shows the world can run tens of generations; 32% C1-R extinctions by 10k are boom-bust of greedy reproducers, not a dead map set.
+- **Not claimed:** emergence. Pre-registered persistence (C2 pop>0 past tick 5000 on these 100 maps) is **0/100**.
+- **Decision:** do not retune C2. Next is C0-R on the same maps (does random+births persist, or only greedy+births?).
+
+---
+
+## 2026-08-16 — `ablation_c0r_100x1000`
+
+- **Git:** `0deb1f9c08314363dcf9643f6348fdb8d6c1d8a8`
+- **Report:** [experiments/reports/ablation_c0r_100x1000/](../experiments/reports/ablation_c0r_100x1000/)
+- **Design:** seeds 1–100, 1000 ticks, clones of **C0 / C0-R / C1-R**. Same maps. Economy m1-v2 frozen.
+- **Headline:**
+
+| Controller | Alive | Any birth | Mean births | Mean max gen | Med TTE |
+|---|---:|---:|---:|---:|---:|
+| C0 | 0% | 0% | 0 | 0 | 105 |
+| C0-R | 0% | 6% (exactly 1) | 0.06 | 0.06 | 103.5 |
+| C1-R | 95% | 99% | 38.4 | 7.17 | 506 (n=5) |
+
+- **C0-R births:** seeds 7, 26, 48, 55, 86, 94 — one child each, then extinct. C1-R matches `ablation_c1r_100x1000` exactly.
+- **Interpretation:** births without foraging do not make a population. C2’s 32% any-birth is better than C0-R’s 6% (the linear genome is not a random walk) and still does not persist. C1-R’s ecology is greedy+births, not “the world hands you generations.”
+- **Decision:** M1 C0/C1/C2 ablations are done. Freeze stands. Next is C3 on this world, or write-up.

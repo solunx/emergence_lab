@@ -145,54 +145,48 @@ python -m emergence_lab batch \
   --controllers reactive_r,evolutionary_oracle_r,evolutionary
 ```
 
-Tracked reports: [`docs/lab_log.md`](docs/lab_log.md) and [`experiments/reports/`](experiments/reports/). Economy **m1-v2** is frozen (food +30, regen 15). M1 C0/C1/C2 + oracle diagnostics are done. Next is **C3-A** on the same frozen world — small N first, then model variants. Not more C2 lottery tickets, not expanding C2 features in place.
+Tracked reports: [`docs/lab_log.md`](docs/lab_log.md) and [`experiments/reports/`](experiments/reports/). Economy **m1-v2** is frozen (food +30, regen 15). M1 C0/C1/C2 + oracle diagnostics are done. C3-A and C3-B on `qwen2.5:7b` (20 seeds × 200 ticks) are STAY policies, not foragers. Next is a **model variant** (`qwen3.8:27b`), not more C2 lottery tickets and not expanding C2 features in place.
 
 Later, if a candidate pattern appears, extra Python tests (permutation, survival curves, genome/lineage on hits) can argue it is not a controller bias. Those are **not** in the default summarize path. Descriptive stats stay automatic; causal claims stay manual.
 
 ## C3 — local LLM (Ollama)
 
-C3 is a **decision adapter**. The simulator does not know the model. There is **no inference cache** (that would turn C3 into a lookup table). Wall-clock latency is not sim time. Parse failure → `INVALID_ACTION` + `STAY`; raw output is always kept in `LLM_CALL` events.
+C3 is a **decision adapter**. The simulator does not know the model. Model tag, endpoint, temperature, and prompt id come from config or CLI (`--llm-model`, `--prompt-id`). There is **no inference cache**. Wall-clock latency is not sim time. Parse failure → `INVALID_ACTION` + `STAY`; raw output is stored in `LLM_CALL` events. Thinking traces are disabled (`think: false`) and `<think>` tags are stripped before parse.
 
-Need a running Ollama daemon. Controllers: `llm` / `llm_a` (prompt A, default) and `llm_b` (survival prompt). No genome, no reproduction.
+Controllers: `llm` / `llm_a` (prompt A: choose one of NORTH/SOUTH/EAST/WEST/STAY from the observation only) and `llm_b` (same action list, plus a stay-alive instruction). No genome, no reproduction. Each model tag is its own `experiment_id`. Changing prompt or model while reusing an id will **resume** and skip finished seeds.
 
-Survival at a fixed tick is **not** the only C3 metric. Also look at food consumed, action distribution, invalid-action rate, time-to-extinction, and whether actions point toward visible food. C3-A matching C1 would be surprising (C1 has a food prior; C3-A does not).
+Survival at a fixed tick is not the only C3 metric. Report food consumed, action distribution, invalid-action rate, and time-to-extinction. C3-A matching C1 would be surprising: C1 has a food prior, C3-A does not.
+
+Cost: **10 organisms × ticks sequential HTTP calls** per seed. Interrupted batches resume if `seed_N/metrics.csv` exists.
+
+### Models
+
+| Ollama tag | Role |
+| --- | --- |
+| `qwen2.5:7b` | C3-A and C3-B on seeds 1–20 × 200 ticks (done) |
+| `qwen3.8:27b` | Next C3-A variant (prompt A held fixed) |
+
+Further tags are in-scope as later named batches, not silent swaps.
+
+On `qwen2.5:7b`, both prompts are **STAY** policies: 0/20 alive at tick 200, mean food 1.6 (A) and 1.3 (B) vs C0 7.2 and C1 83. C3 outlives C0 slightly by not walking. Numbers and interpretation: [`docs/lab_log.md`](docs/lab_log.md), [`c3a_qwen25_7b_20x200`](experiments/reports/c3a_qwen25_7b_20x200/), [`c3b_qwen25_7b_20x200`](experiments/reports/c3b_qwen25_7b_20x200/).
 
 ```bash
-# Smoke: one seed, few ticks, a small local model. Ollama must be up.
+# Requires a running Ollama daemon.
 python -m emergence_lab batch \
-  --experiment-id c3a_qwen25_7b_smoke \
-  --seeds 1 \
-  --ticks 50 \
+  --experiment-id c3a_qwen25_7b_20x200 \
+  --seeds 1-20 \
+  --ticks 200 \
   --controllers random,reactive,llm \
   --llm-model qwen2.5:7b \
   --prompt-id llm_a
 
-# After smoke: still small N (20–50 seeds, 200–1000 ticks), model tag in the id.
 python -m emergence_lab batch \
-  --experiment-id c3a_qwen25_7b_50x200 \
+  --experiment-id c3b_qwen25_7b_20x200 \
   --seeds 1-20 \
   --ticks 200 \
-  --controllers random,reactive,llm \
-  --config experiments/configs/c3_ollama.yaml \
+  --controllers random,reactive,llm_b \
   --llm-model qwen2.5:7b
 ```
-
-Cost: **10 organisms × ticks sequential HTTP calls** per seed. A 32B model on every tick is a long wall-clock run. Smoke with 7B/8B first.
-
-### RTX 3090 (24 GB) — which Qwen3.8?
-
-Community + Ollama library (mid-August 2026): **`qwen3.8:27b`** (alias `qwen3.8:latest`), default **Q4_K_M ~18 GB**. That is the 24 GB sweet spot: weights fit, ~6 GB left for KV cache at normal C3 context (the prompt is a 5×5, not 128K). Command once you are ready: `ollama pull qwen3.8:27b`. Needs Ollama **≥ 0.32.12**.
-
-| Card budget | Tag / quant | Notes |
-| --- | --- | --- |
-| 3090 24 GB (recommended) | `qwen3.8:27b` Q4_K_M | Official default; intended 24 GB home |
-| 3090, more quality, short context | Q5_K_M (~20 GB) | Tight; keep `num_predict` small |
-| 3090, do **not** | Q8_0 (~29 GB) | Offload / thrash |
-| C3 **smoke** (now) | `qwen2.5:7b` or `llama3.1:8b` | Already on disk; cheap sequential calls |
-
-Qwen3.8 has **thinking on by default**. The lab sends `think: false` and strips `<think>` before parse. Do not treat chain-of-thought as inner reasoning.
-
-You already have several 14B–32B tags (`qwen2.5:32b`, `qwen3:32b`, `qwen3.5:27b`, `mistral-small:24b`, `gemma3:27b`, …). Those are valid **later variants**, each with its own `experiment_id`. Do not make 32B the C3-A default: sequential calls are slow, and smoke should stay cheap. Waiting for community quant feedback is reasonable; the default 27B Q4 is still the one I would pull for a 3090.
 
 ## Project layout
 

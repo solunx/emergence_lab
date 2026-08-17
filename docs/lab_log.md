@@ -6,17 +6,18 @@ A visually interesting GIF is not evidence of emergence.
 
 ---
 
-## Status (2026-08-16)
+## Status (2026-08-17)
 
 | Item | Value |
 |---|---|
 | Frozen economy | **m1-v2**: food `+30`, `regen_delay=15` |
 | Do not retune | food, regen, threshold, C2 mutation, C2 genome init, **C2 feature set** |
-| Completed | M1 matrix + R-ablations + 10k persist + C2 oracle + **C3-A/B on qwen2.5:7b** (20×200) |
-| C2 why | (1) 9-bit ceiling vs C1 (oracle 32% alive vs C1 97%); (2) bootstrap (C2 32% any-birth vs oracle_r 96%); (3) even oracle_r is weak (17% alive vs C1-R 95%) |
-| C3 why (7B) | Prompt A and B are both **STAY** policies: 0/20 alive, food 1.6 / 1.3 vs C0 7.2 vs C1 83. Longer TTE than C0 is metabolism (STAY −1), not foraging |
-| Next | **C3-A model variant** `qwen3.8:27b` (smoke, then same seeds 1–20 × 200 if wall-clock allows) |
-| Not next | more C2 seeds; expanding C2 features; rewriting C3 prompts in place to rescue 7B; C4 before a second model |
+| Completed | M1 + C2 oracle + **C3-A/B `qwen2.5:7b`** + **C3-A `qwen3.8:27b`** (20×200) |
+| C2 why | (1) 9-bit ceiling vs C1; (2) bootstrap; (3) even oracle_r is weak vs C1-R |
+| C3 why (7B) | A and B are **STAY**: 0/20 alive, food 1.6 / 1.3 vs C0 7.2 vs C1 83 |
+| C3 why (27B-A) | **20/20 alive**, food **86** (tie with C1 83). Policy is EAST+N/S, not C1 (entropy 0.99 vs 2.3, no STAY). C3-A is model-dependent |
+| Next | **C3-B `qwen3.8:27b`** on the same 20 maps |
+| Not next | rewriting prompts to rescue 7B; C2 feature expansion; treating 27B harvest as emergence |
 
 C2 fails because the phenotype cannot be C1 **and** random-init evolution rarely finds even the cardinal policy that *is* in the space. That is a result, not a reason to retune C2.
 
@@ -217,4 +218,26 @@ This is specified, not a bug. It means C2-failure is not yet “evolution cannot
 - **Design:** same maps, C0 / C1 / C3-B (`llm_b`, `qwen2.5:7b`). Survival sentence only.
 - **Headline:** still **0/20** alive. Food **1.3** (below A’s 1.6). Entropy **0.16** (more STAY than A). Med TTE 127. Invalid 0. C0/C1 clones match the A batch.
 - **Interpretation:** “remain alive” did not induce foraging on this 7B. It tightened STAY, which is locally consistent with the instruction and cheaper than walking. Prompt A vs B is not the 7B failure mode.
-- **Decision:** next is model scale with prompt A held fixed (`qwen3.8:27b`), new experiment id, smoke first.
+- **Decision:** prompt A vs B is not the 7B failure mode. Next was model scale (`qwen3.8:27b`); see `c3a_qwen38_27b_20x200`.
+
+---
+
+## 2026-08-16 — `c3a_qwen38_27b_smoke`
+
+- **Git:** `e6d17a94a519454641a2d3589d6fb0a2a9aaeee3`
+- **Report:** [experiments/reports/c3a_qwen38_27b_smoke/](../experiments/reports/c3a_qwen38_27b_smoke/)
+- **Design:** seed 1, 50 ticks, C0 / C1 / C3-A (`qwen3.8:27b`, prompt A). Same map as the 7B smoke.
+- **Headline:** 500 calls, 0 invalid, ~931 ms/call. Food C1 25 / C0 4 / C3-A **29**. Pop 6 (4 deaths). **465× EAST, 0 STAY** (7B on this seed: 1 food, ~93% STAY).
+- **Interpretation:** not a STAY policy. Deaths are MOVE cost. Need 20×200.
+
+---
+
+## 2026-08-17 — `c3a_qwen38_27b_20x200`
+
+- **Git:** `e6d17a94a519454641a2d3589d6fb0a2a9aaeee3`
+- **Report:** [experiments/reports/c3a_qwen38_27b_20x200/](../experiments/reports/c3a_qwen38_27b_20x200/)
+- **Design:** seeds 1–20, 200 ticks, C0 / C1 / C3-A (`qwen3.8:27b`, prompt A). Same maps as 7B-A.
+- **Headline:** **20/20 alive**, mean food **86** (C1 83, 7B-A 1.6). Paired food vs C1: Δ +2.8, CI includes 0, 10/20 split. Pop 4.55 vs C1 4.95. Entropy 0.99 vs C1 2.31. Invalid 0.
+- **Interpretation:** C3-A harvests like C1 on this world **without being C1**. Sampled logs: EAST dominant, some N/S, WEST≈0, STAY=0. Torus + 20 patches makes an eastward sweep a working harvest heuristic. 7B STAY vs 27B EAST is a model-scale result, not a prompt rewrite.
+- **Not claimed:** emergence, inner reasoning, 1000-tick persistence, C3-B on 27B.
+- **Decision:** C3-B on `qwen3.8:27b`, same 20 maps (`c3b_qwen38_27b_20x200`).

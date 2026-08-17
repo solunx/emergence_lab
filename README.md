@@ -145,7 +145,7 @@ python -m emergence_lab batch \
   --controllers reactive_r,evolutionary_oracle_r,evolutionary
 ```
 
-Tracked reports: [`docs/lab_log.md`](docs/lab_log.md) and [`experiments/reports/`](experiments/reports/). Economy **m1-v2** is frozen (food +30, regen 15). M1 C0/C1/C2 + oracle diagnostics are done. C3-A and C3-B on `qwen2.5:7b` (20 seeds × 200 ticks) are STAY policies, not foragers. Next is a **model variant** (`qwen3.8:27b`), not more C2 lottery tickets and not expanding C2 features in place.
+Tracked reports: [`docs/lab_log.md`](docs/lab_log.md) and [`experiments/reports/`](experiments/reports/). Economy **m1-v2** is frozen (food +30, regen 15). M1 C0/C1/C2 + oracle diagnostics are done. C3-A is **model-dependent**: `qwen2.5:7b` STAY (0/20 alive); `qwen3.8:27b` harvests like C1 on the same 20 maps (20/20 alive, food 86 vs C1 83) with a different action mix (EAST-heavy, no STAY). Next is C3-B on 27B, not C2 feature expansion.
 
 Later, if a candidate pattern appears, extra Python tests (permutation, survival curves, genome/lineage on hits) can argue it is not a controller bias. Those are **not** in the default summarize path. Descriptive stats stay automatic; causal claims stay manual.
 
@@ -155,7 +155,7 @@ C3 is a **decision adapter**. The simulator does not know the model. Model tag, 
 
 Controllers: `llm` / `llm_a` (prompt A: choose one of NORTH/SOUTH/EAST/WEST/STAY from the observation only) and `llm_b` (same action list, plus a stay-alive instruction). No genome, no reproduction. Each model tag is its own `experiment_id`. Changing prompt or model while reusing an id will **resume** and skip finished seeds.
 
-Survival at a fixed tick is not the only C3 metric. Report food consumed, action distribution, invalid-action rate, and time-to-extinction. C3-A matching C1 would be surprising: C1 has a food prior, C3-A does not.
+Survival at a fixed tick is not the only C3 metric. Report food consumed, action distribution, invalid-action rate, and time-to-extinction. C3-A and C1 share the raw 5×5, not a food objective: C1 has a hard-coded prior; C3-A does not. Harvest rates can still match, as with `qwen3.8:27b`.
 
 Cost: **10 organisms × ticks sequential HTTP calls** per seed. Interrupted batches resume if `seed_N/metrics.csv` exists.
 
@@ -163,12 +163,12 @@ Cost: **10 organisms × ticks sequential HTTP calls** per seed. Interrupted batc
 
 | Ollama tag | Role |
 | --- | --- |
-| `qwen2.5:7b` | C3-A and C3-B on seeds 1–20 × 200 ticks (done) |
-| `qwen3.8:27b` | Next C3-A variant (prompt A held fixed) |
+| `qwen2.5:7b` | C3-A and C3-B, seeds 1–20 × 200 ticks — STAY, 0/20 alive |
+| `qwen3.8:27b` | C3-A, same maps — 20/20 alive, food ≈ C1; C3-B next |
 
 Further tags are in-scope as later named batches, not silent swaps.
 
-On `qwen2.5:7b`, both prompts are **STAY** policies: 0/20 alive at tick 200, mean food 1.6 (A) and 1.3 (B) vs C0 7.2 and C1 83. C3 outlives C0 slightly by not walking. Numbers and interpretation: [`docs/lab_log.md`](docs/lab_log.md), [`c3a_qwen25_7b_20x200`](experiments/reports/c3a_qwen25_7b_20x200/), [`c3b_qwen25_7b_20x200`](experiments/reports/c3b_qwen25_7b_20x200/).
+On `qwen2.5:7b`, both prompts are **STAY** policies (food 1.6 / 1.3 vs C0 7.2 vs C1 83). On `qwen3.8:27b` with prompt A, mean food is **86** and all 20 clones persist to tick 200; sampled logs are EAST-dominant with almost no WEST or STAY (entropy ~1.0 vs C1 ~2.3). Same prompt, different model. Numbers: [`docs/lab_log.md`](docs/lab_log.md), [`c3a_qwen25_7b_20x200`](experiments/reports/c3a_qwen25_7b_20x200/), [`c3b_qwen25_7b_20x200`](experiments/reports/c3b_qwen25_7b_20x200/), [`c3a_qwen38_27b_20x200`](experiments/reports/c3a_qwen38_27b_20x200/).
 
 ```bash
 # Requires a running Ollama daemon.
@@ -186,6 +186,14 @@ python -m emergence_lab batch \
   --ticks 200 \
   --controllers random,reactive,llm_b \
   --llm-model qwen2.5:7b
+
+python -m emergence_lab batch \
+  --experiment-id c3a_qwen38_27b_20x200 \
+  --seeds 1-20 \
+  --ticks 200 \
+  --controllers random,reactive,llm \
+  --llm-model qwen3.8:27b \
+  --prompt-id llm_a
 ```
 
 ## Project layout

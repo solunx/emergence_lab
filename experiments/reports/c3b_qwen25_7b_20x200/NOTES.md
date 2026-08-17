@@ -38,4 +38,4 @@ Prompt B did not unlock C1-like foraging on this model. “Remain alive” is lo
 
 ## Decision
 
-7B C3-A and C3-B are both STAY policies on m1-v2. Next is a **model variant** with prompt A held fixed: `qwen3.8:27b`, own experiment id, smoke first then the same 20 maps if wall-clock allows.
+7B C3-A and C3-B are both STAY policies on m1-v2. Next was a model variant with prompt A held fixed (`qwen3.8:27b`). That run is done: see `c3a_qwen38_27b_20x200`.

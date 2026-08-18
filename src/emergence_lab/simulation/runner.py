@@ -44,6 +44,7 @@ def layout_config(config: SimConfig) -> SimConfig:
         controller="random",
         genome_enabled=False,
         reproduction_enabled=False,
+        memory_enabled=False,
     )
 
 
@@ -85,12 +86,18 @@ def run_simulation(
     write_snapshot(snapshots_dir / f"tick_{config.ticks:06d}.json", engine.state)
 
     llm = config.controller in LLM_CONTROLLERS
+    if llm and config.memory_enabled:
+        controller_version = "m2-c4-v1"
+    elif llm:
+        controller_version = "m2-c3-v1"
+    else:
+        controller_version = "m1-v1"
     metadata = {
         "experiment_id": config.experiment_id,
         "run_id": out_dir.name,
         "seed": config.seed,
         "controller_type": config.controller,
-        "controller_version": "m2-c3-v1" if llm else "m1-v1",
+        "controller_version": controller_version,
         "world_version": "m1-v1",
         "config_version": "0.2",
         "git_commit": git_commit(),
@@ -154,6 +161,7 @@ def run_same_world(
             controller=name,
             reproduction_enabled=None,
             genome_enabled=None,
+            memory_enabled=None,
         )
         run_config.__post_init__()
         run_dir = unique_run_dir(out_root, config.seed, name)

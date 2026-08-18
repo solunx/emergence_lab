@@ -34,6 +34,8 @@ CONTROLLER_ORDER = (
     "llm_a",
     "llm_b",
     "llm_memory",
+    "llm_a_memory",
+    "llm_b_memory",
     "llm_evolution",
     "llm_evolution_memory",
 )
@@ -58,6 +60,7 @@ NUMERIC_FIELDS = (
     "invalid_action_rate",
     "llm_calls",
     "llm_mean_latency_ms",
+    "memory_writes",
 )
 
 PRIMARY_METRICS = (
@@ -80,7 +83,7 @@ PRIMARY_METRICS = (
 )
 
 PER_RUN_CONFIG_KEYS = frozenset(
-    {"seed", "controller", "extra", "reproduction_enabled", "genome_enabled"}
+    {"seed", "controller", "extra", "reproduction_enabled", "genome_enabled", "memory_enabled"}
 )
 
 PARAM_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
@@ -289,6 +292,7 @@ def collect_batch_parameters(
         flags = {
             "reproduction_enabled": bool(config.get("reproduction_enabled")),
             "genome_enabled": bool(config.get("genome_enabled")),
+            "memory_enabled": bool(config.get("memory_enabled")),
         }
         controller_flags[record["controller"]][_json_key(flags)] += 1
         for key, value in record["meta"].items():
@@ -414,13 +418,14 @@ def render_parameters_md(params: dict[str, Any], controllers: list[str]) -> list
     if flags:
         lines.append("### Controller flags")
         lines.append("")
-        lines.append("| Controller | Reproduction | Genome |")
-        lines.append("|---|---|---|")
+        lines.append("| Controller | Reproduction | Genome | Memory |")
+        lines.append("|---|---|---|---|")
         for controller in controllers:
             item = flags.get(controller, {})
             lines.append(
                 f"| {controller} | {_yes_no(item.get('reproduction_enabled'))} | "
-                f"{_yes_no(item.get('genome_enabled'))} |"
+                f"{_yes_no(item.get('genome_enabled'))} | "
+                f"{_yes_no(item.get('memory_enabled'))} |"
             )
         lines.append("")
         lines.append(

@@ -4,7 +4,7 @@ Minimal artificial-life laboratory: **one world, one body, one observation, one 
 
 This is a **mechanistic artificial-life model, not a biological model**. Its scientific value is in the consequences of the specified computational rules, not in biological realism.
 
-Normative rules live in [`spec.md`](spec.md). Milestone 1 is implemented (world, C0–C2, logging, replay, GIFs, analytics). Milestone 2 **C3** is implemented: a local Ollama LLM as the decision function. Model name, endpoint, temperature, and prompt id are **config/CLI only — never hardcoded**. C4 (memory) is not built yet.
+Normative rules live in [`spec.md`](spec.md). Milestone 1 is implemented (world, C0–C2, logging, replay, GIFs, analytics). Milestone 2 **C3** (LLM) and **C4** (LLM + per-organism `list[str]` memory) are implemented. Model name, endpoint, temperature, and prompt id are **config/CLI only — never hardcoded**. C5 (LLM + evolution) is not built yet.
 
 ## Research question
 
@@ -31,7 +31,7 @@ Reproduction is **not** a universal world rule in the main matrix. C2 may reprod
 | C5 | LLM + Evolution | Yes | No | Yes | 3 |
 | C6 | LLM + Evolution + Memory | Yes | Yes | Yes | 3 |
 
-C1 has a food-seeking objective. **C3-A does not** (prompt: pick NORTH/SOUTH/EAST/WEST/STAY from the 5×5 only). They share information, not the same inductive bias. C3-B is a survival-instructed ablation (`llm_b`), not a new matrix ID. C2-oracle is not a C1 clone: it cannot see diagonal food.
+C1 has a food-seeking objective. **C3-A does not** (prompt: pick NORTH/SOUTH/EAST/WEST/STAY from the 5×5 only). They share information, not the same inductive bias. C3-B / C4-B are survival-instructed ablations (`llm_b` / `llm_b_memory`), not new matrix IDs. C4 is C3 plus optional `MEMORY:` writes (visible T+1, cap 20, max 200 chars). That also lengthens the prompt; do not read C4−C3 as a pure memory effect. C2-oracle is not a C1 clone: it cannot see diagonal food.
 
 Local model **variants are in-scope**. Each Ollama tag is a different `experiment_id` (e.g. `c3a_qwen25_7b` vs `c3a_qwen38_27b`). Do not silently swap models inside one batch.
 
@@ -145,7 +145,7 @@ python -m emergence_lab batch \
   --controllers reactive_r,evolutionary_oracle_r,evolutionary
 ```
 
-Tracked reports: [`docs/lab_log.md`](docs/lab_log.md) and [`experiments/reports/`](experiments/reports/). Economy **m1-v2** is frozen (food +30, regen 15). M1 C0/C1/C2 + oracle diagnostics are done. C3-A is **model-dependent**: `qwen2.5:7b` STAY (0/20 alive); `qwen3.8:27b` harvests like C1 on the same 20 maps (20/20 alive, food 86 vs C1 83) with a different action mix (EAST-heavy, no STAY). Next is C3-B on 27B, not C2 feature expansion.
+Tracked reports: [`docs/lab_log.md`](docs/lab_log.md) and [`experiments/reports/`](experiments/reports/). Economy **m1-v2** is frozen (food +30, regen 15). M1 C0/C1/C2 + oracle diagnostics are done. C3 is **model-dependent**: `qwen2.5:7b` STAY (0/20 alive, A and B); `qwen3.8:27b` harvests like C1 on the same 20 maps (A/B both 20/20 alive, food 86 / 82 vs C1 83) with a different action mix (EAST-heavy). Prompt B is a weak ablation on 27B. Next is C4 on 27B-A, not C2 feature expansion.
 
 Later, if a candidate pattern appears, extra Python tests (permutation, survival curves, genome/lineage on hits) can argue it is not a controller bias. Those are **not** in the default summarize path. Descriptive stats stay automatic; causal claims stay manual.
 
@@ -153,7 +153,7 @@ Later, if a candidate pattern appears, extra Python tests (permutation, survival
 
 C3 is a **decision adapter**. The simulator does not know the model. Model tag, endpoint, temperature, and prompt id come from config or CLI (`--llm-model`, `--prompt-id`). There is **no inference cache**. Wall-clock latency is not sim time. Parse failure → `INVALID_ACTION` + `STAY`; raw output is stored in `LLM_CALL` events. Thinking traces are disabled (`think: false`) and `<think>` tags are stripped before parse.
 
-Controllers: `llm` / `llm_a` (prompt A: choose one of NORTH/SOUTH/EAST/WEST/STAY from the observation only) and `llm_b` (same action list, plus a stay-alive instruction). No genome, no reproduction. Each model tag is its own `experiment_id`. Changing prompt or model while reusing an id will **resume** and skip finished seeds.
+Controllers: `llm` / `llm_a` (prompt A: choose one of NORTH/SOUTH/EAST/WEST/STAY from the observation only) and `llm_b` (same action list, plus a stay-alive instruction). No genome, no reproduction, no memory. Each model tag is its own `experiment_id`. Changing prompt or model while reusing an id will **resume** and skip finished seeds.
 
 Survival at a fixed tick is not the only C3 metric. Report food consumed, action distribution, invalid-action rate, and time-to-extinction. C3-A and C1 share the raw 5×5, not a food objective: C1 has a hard-coded prior; C3-A does not. Harvest rates can still match, as with `qwen3.8:27b`.
 
@@ -164,11 +164,11 @@ Cost: **10 organisms × ticks sequential HTTP calls** per seed. Interrupted batc
 | Ollama tag | Role |
 | --- | --- |
 | `qwen2.5:7b` | C3-A and C3-B, seeds 1–20 × 200 ticks — STAY, 0/20 alive |
-| `qwen3.8:27b` | C3-A, same maps — 20/20 alive, food ≈ C1; C3-B next |
+| `qwen3.8:27b` | C3-A and C3-B, same maps — 20/20 alive, food ≈ C1 (86 / 82 vs 83) |
 
 Further tags are in-scope as later named batches, not silent swaps.
 
-On `qwen2.5:7b`, both prompts are **STAY** policies (food 1.6 / 1.3 vs C0 7.2 vs C1 83). On `qwen3.8:27b` with prompt A, mean food is **86** and all 20 clones persist to tick 200; sampled logs are EAST-dominant with almost no WEST or STAY (entropy ~1.0 vs C1 ~2.3). Same prompt, different model. Numbers: [`docs/lab_log.md`](docs/lab_log.md), [`c3a_qwen25_7b_20x200`](experiments/reports/c3a_qwen25_7b_20x200/), [`c3b_qwen25_7b_20x200`](experiments/reports/c3b_qwen25_7b_20x200/), [`c3a_qwen38_27b_20x200`](experiments/reports/c3a_qwen38_27b_20x200/).
+On `qwen2.5:7b`, both prompts are **STAY** policies (food 1.6 / 1.3 vs C0 7.2 vs C1 83). On `qwen3.8:27b`, A and B both persist 20/20 with food **86 / 82** (ties with C1 83); sampled logs are EAST-dominant (entropy ~1.0 vs C1 ~2.3). B does not switch 27B to STAY; end energy is lower (664 vs A 924). Same prompts, different model. Numbers: [`docs/lab_log.md`](docs/lab_log.md), [`c3a_qwen25_7b_20x200`](experiments/reports/c3a_qwen25_7b_20x200/), [`c3b_qwen25_7b_20x200`](experiments/reports/c3b_qwen25_7b_20x200/), [`c3a_qwen38_27b_20x200`](experiments/reports/c3a_qwen38_27b_20x200/), [`c3b_qwen38_27b_20x200`](experiments/reports/c3b_qwen38_27b_20x200/).
 
 ```bash
 # Requires a running Ollama daemon.
@@ -194,6 +194,33 @@ python -m emergence_lab batch \
   --controllers random,reactive,llm \
   --llm-model qwen3.8:27b \
   --prompt-id llm_a
+
+python -m emergence_lab batch \
+  --experiment-id c3b_qwen38_27b_20x200 \
+  --seeds 1-20 \
+  --ticks 200 \
+  --controllers random,reactive,llm_b \
+  --llm-model qwen3.8:27b
+```
+
+## C4 — LLM + memory
+
+C4 is C3 plus a per-organism `list[str]` (cap 20, 200 chars, FIFO, not inherited). The LLM may append one `MEMORY:` line per decision, including on invalid/fallback. Writes apply at end of tick T and are visible in `decide` from T+1. No embeddings, no RAG. Empty / omitted `MEMORY:` = no write.
+
+Controllers: `llm_memory` / `llm_a_memory` (prompt A + memory) and `llm_b_memory` (prompt B + memory). Same action list as C3; the extra instruction is optional persistence, not a food objective. C4 prompts are longer than C3 even with empty memory.
+
+Default `num_predict` for C4 configs is 128 (C3 stays 64) so a short memory line is not truncated by the sampler.
+
+```bash
+# Requires a running Ollama daemon.
+python -m emergence_lab batch \
+  --experiment-id c4a_qwen38_27b_smoke \
+  --seeds 1 \
+  --ticks 50 \
+  --controllers random,reactive,llm_memory \
+  --llm-model qwen3.8:27b \
+  --prompt-id llm_a_memory \
+  --llm-num-predict 128
 ```
 
 ## Project layout
@@ -201,9 +228,9 @@ python -m emergence_lab batch \
 ```text
 src/emergence_lab/          simulator, analytics, visualization, llm adapter
 docs/lab_log.md             chronological interpretation (tracked)
-experiments/configs/        YAML configs (including `c3_ollama.yaml`)
+experiments/configs/        YAML configs (`c3_ollama.yaml`, `c4_ollama.yaml`)
 experiments/results/        raw runs (gitignored)
 experiments/reports/        aggregate.md + CSVs + NOTES (tracked)
-tests/                      world, invariants, verification controllers, replay, C3 parse
+tests/                      world, invariants, verification controllers, replay, C3/C4 parse
 spec.md                     implementation specification
 ```

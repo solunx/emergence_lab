@@ -19,6 +19,9 @@ CONTROLLER_REPRODUCTION = {
     "llm": False,
     "llm_a": False,
     "llm_b": False,
+    "llm_memory": False,
+    "llm_a_memory": False,
+    "llm_b_memory": False,
     "always_stay": False,
     "always_north": False,
 }
@@ -34,12 +37,34 @@ CONTROLLER_GENOME = {
     "llm": False,
     "llm_a": False,
     "llm_b": False,
+    "llm_memory": False,
+    "llm_a_memory": False,
+    "llm_b_memory": False,
+    "always_stay": False,
+    "always_north": False,
+}
+
+CONTROLLER_MEMORY = {
+    "random": False,
+    "random_r": False,
+    "reactive": False,
+    "reactive_r": False,
+    "evolutionary": False,
+    "evolutionary_oracle": False,
+    "evolutionary_oracle_r": False,
+    "llm": False,
+    "llm_a": False,
+    "llm_b": False,
+    "llm_memory": True,
+    "llm_a_memory": True,
+    "llm_b_memory": True,
     "always_stay": False,
     "always_north": False,
 }
 
 # Named experiment conditions share a decision class. `_r` means reproduction
 # without a genome (C0-R / C1-R ablations). llm / llm_a = prompt A; llm_b = prompt B.
+# llm_memory / llm_a_memory = C4 prompt A; llm_b_memory = C4 prompt B.
 DECISION_CONTROLLER = {
     "random": "random",
     "random_r": "random",
@@ -51,6 +76,9 @@ DECISION_CONTROLLER = {
     "llm": "llm",
     "llm_a": "llm",
     "llm_b": "llm",
+    "llm_memory": "llm",
+    "llm_a_memory": "llm",
+    "llm_b_memory": "llm",
     "always_stay": "always_stay",
     "always_north": "always_north",
 }
@@ -59,7 +87,20 @@ CONTROLLER_PROMPT = {
     "llm": "llm_a",
     "llm_a": "llm_a",
     "llm_b": "llm_b",
+    "llm_memory": "llm_a_memory",
+    "llm_a_memory": "llm_a_memory",
+    "llm_b_memory": "llm_b_memory",
 }
+
+C3_PROMPT_TO_MEMORY = {
+    "llm_a": "llm_a_memory",
+    "llm": "llm_a_memory",
+    "llm_b": "llm_b_memory",
+}
+
+NAMED_PROMPT_CONTROLLERS = frozenset(
+    {"llm_a", "llm_b", "llm_a_memory", "llm_b_memory"}
+)
 
 LLM_CONTROLLERS = frozenset(CONTROLLER_PROMPT)
 
@@ -94,6 +135,7 @@ class SimConfig:
     snapshot_every: int = 100
     reproduction_enabled: bool | None = None
     genome_enabled: bool | None = None
+    memory_enabled: bool | None = None
     llm_model: str | None = None
     llm_endpoint: str = DEFAULT_LLM_ENDPOINT
     llm_temperature: float = 0.0
@@ -108,10 +150,14 @@ class SimConfig:
             self.reproduction_enabled = CONTROLLER_REPRODUCTION.get(self.controller, False)
         if self.genome_enabled is None:
             self.genome_enabled = CONTROLLER_GENOME.get(self.controller, False)
-        if self.controller in ("llm_a", "llm_b"):
+        if self.memory_enabled is None:
+            self.memory_enabled = CONTROLLER_MEMORY.get(self.controller, False)
+        if self.controller in NAMED_PROMPT_CONTROLLERS:
             self.llm_prompt_id = CONTROLLER_PROMPT[self.controller]
         elif self.llm_prompt_id is None:
             self.llm_prompt_id = CONTROLLER_PROMPT.get(self.controller, "llm_a")
+        if self.memory_enabled and self.llm_prompt_id in C3_PROMPT_TO_MEMORY:
+            self.llm_prompt_id = C3_PROMPT_TO_MEMORY[self.llm_prompt_id]
         if not self.llm_endpoint:
             self.llm_endpoint = DEFAULT_LLM_ENDPOINT
 
@@ -119,6 +165,7 @@ class SimConfig:
         data = asdict(self)
         data["reproduction_enabled"] = bool(self.reproduction_enabled)
         data["genome_enabled"] = bool(self.genome_enabled)
+        data["memory_enabled"] = bool(self.memory_enabled)
         return data
 
     @classmethod

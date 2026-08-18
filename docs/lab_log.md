@@ -6,18 +6,18 @@ A visually interesting GIF is not evidence of emergence.
 
 ---
 
-## Status (2026-08-17)
+## Status (2026-08-18)
 
 | Item | Value |
 |---|---|
 | Frozen economy | **m1-v2**: food `+30`, `regen_delay=15` |
 | Do not retune | food, regen, threshold, C2 mutation, C2 genome init, **C2 feature set** |
-| Completed | M1 + C2 oracle + **C3-A/B `qwen2.5:7b`** + **C3-A `qwen3.8:27b`** (20×200) |
+| Completed | M1 + C2 oracle + **C3-A/B `qwen2.5:7b`** + **C3-A/B `qwen3.8:27b`** (20×200) |
 | C2 why | (1) 9-bit ceiling vs C1; (2) bootstrap; (3) even oracle_r is weak vs C1-R |
 | C3 why (7B) | A and B are **STAY**: 0/20 alive, food 1.6 / 1.3 vs C0 7.2 vs C1 83 |
-| C3 why (27B-A) | **20/20 alive**, food **86** (tie with C1 83). Policy is EAST+N/S, not C1 (entropy 0.99 vs 2.3, no STAY). C3-A is model-dependent |
-| Next | **C3-B `qwen3.8:27b`** on the same 20 maps |
-| Not next | rewriting prompts to rescue 7B; C2 feature expansion; treating 27B harvest as emergence |
+| C3 why (27B) | A and B both **20/20 alive**, food **86 / 82** (ties with C1 83). EAST+N/S, not C1 (entropy ~0.99 vs 2.3). B is not a second phenotype; end energy is lower (664 vs A 924 / C1 846). C3 is **model-dependent**; prompt B is a weak ablation on 27B |
+| Next | **C4 LLM + Memory** on `qwen3.8:27b` prompt A (after the write path exists) |
+| Not next | rewriting prompts to rescue 7B; C2 feature expansion; treating 27B harvest as emergence; 1000-tick C3; C5 before C4 |
 
 C2 fails because the phenotype cannot be C1 **and** random-init evolution rarely finds even the cardinal policy that *is* in the space. That is a result, not a reason to retune C2.
 
@@ -241,3 +241,13 @@ This is specified, not a bug. It means C2-failure is not yet “evolution cannot
 - **Interpretation:** C3-A harvests like C1 on this world **without being C1**. Sampled logs: EAST dominant, some N/S, WEST≈0, STAY=0. Torus + 20 patches makes an eastward sweep a working harvest heuristic. 7B STAY vs 27B EAST is a model-scale result, not a prompt rewrite.
 - **Not claimed:** emergence, inner reasoning, 1000-tick persistence, C3-B on 27B.
 - **Decision:** C3-B on `qwen3.8:27b`, same 20 maps (`c3b_qwen38_27b_20x200`).
+
+## 2026-08-17 — `c3b_qwen38_27b_20x200`
+
+- **Git:** `1fd55fe5c24ffeb9c6b32e1e58b64d83662bd530`
+- **Report:** [experiments/reports/c3b_qwen38_27b_20x200/](../experiments/reports/c3b_qwen38_27b_20x200/)
+- **Design:** seeds 1–20, 200 ticks, C0 / C1 / C3-B (`qwen3.8:27b`, prompt B). Same maps as 27B-A.
+- **Headline:** **20/20 alive**, mean food **82.4** (C1 83.2, 27B-A 86.0). Paired food vs C1: Δ −0.75, CI includes 0, 9/11 split. Pop 4.40 vs C1 4.95. Entropy 0.99 (same as 27B-A). End energy **664** vs C1 846 vs 27B-A 924. Invalid 0.
+- **Interpretation:** prompt B does not create a second 27B phenotype and does not induce 7B-style STAY. Sampled logs stay EAST-heavy with a little STAY/WEST. Harvest still ties C1; the cash is thinner. On 7B, B tightened STAY; on 27B it is a weak ablation. C3-A vs C3-B is not the 27B story. Scale is.
+- **Not claimed:** emergence, inner reasoning, 1000-tick persistence, that B “teaches survival.”
+- **Decision:** C3 A/B × 7B/27B is closed. Next is C4 (memory) on 27B prompt A, not a prompt rewrite and not C5.

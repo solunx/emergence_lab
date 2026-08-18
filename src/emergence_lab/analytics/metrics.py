@@ -34,6 +34,7 @@ def metrics_from_events(events: list[dict[str, Any]]) -> dict[str, Any]:
     founders_reproducing = len({e["parent_id"] for e in birth_events if e["parent_id"] not in child_ids})
     actions = Counter(e["action"] for e in events if e["event"] == "ACTION")
     invalid = sum(1 for e in events if e["event"] == "INVALID_ACTION")
+    memory_writes = sum(1 for e in events if e["event"] == "MEMORY_WRITE")
     llm_calls = [e for e in events if e["event"] == "LLM_CALL"]
     llm_latencies = [
         float(e["latency_ms"]) for e in llm_calls if e.get("latency_ms") is not None
@@ -83,6 +84,7 @@ def metrics_from_events(events: list[dict[str, Any]]) -> dict[str, Any]:
         "invalid_action_rate": invalid / total_actions if total_actions else 0.0,
         "llm_calls": len(llm_calls),
         "llm_mean_latency_ms": _mean(llm_latencies) if llm_latencies else 0.0,
+        "memory_writes": memory_writes,
     }
 
 

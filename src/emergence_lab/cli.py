@@ -54,6 +54,7 @@ def _config_from_args(args: argparse.Namespace, *, seed: int | None = None) -> S
     _apply_llm_args(config, args)
     config.reproduction_enabled = None
     config.genome_enabled = None
+    config.memory_enabled = None
     config.__post_init__()
     return config
 
@@ -145,6 +146,7 @@ def cmd_batch(args: argparse.Namespace) -> None:
         config.experiment_id = experiment_id
         config.reproduction_enabled = None
         config.genome_enabled = None
+        config.memory_enabled = None
         config.__post_init__()
         run_compare_seed(
             config,
@@ -219,7 +221,7 @@ def _add_llm_flags(parser: argparse.ArgumentParser) -> None:
         "--llm-model",
         type=str,
         default=None,
-        help="Ollama tag, e.g. qwen2.5:7b. Required for llm/llm_a/llm_b. Never hardcoded.",
+        help="Ollama tag, e.g. qwen2.5:7b. Required for llm/llm_a/llm_b/llm_memory. Never hardcoded.",
     )
     parser.add_argument(
         "--llm-endpoint",
@@ -231,8 +233,8 @@ def _add_llm_flags(parser: argparse.ArgumentParser) -> None:
         "--prompt-id",
         type=str,
         default=None,
-        choices=["llm_a", "llm_b"],
-        help="Prompt A (minimal) or B (survival). llm_b controller forces B.",
+        choices=["llm_a", "llm_b", "llm_a_memory", "llm_b_memory"],
+        help="C3: llm_a / llm_b. C4: llm_a_memory / llm_b_memory. Named controllers force their prompt.",
     )
     parser.add_argument("--llm-temperature", type=float, default=None)
     parser.add_argument("--llm-timeout", type=float, default=None, help="Seconds per LLM call")

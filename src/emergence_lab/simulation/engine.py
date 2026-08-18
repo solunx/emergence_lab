@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import replace
 
-from emergence_lab.config import DECISION_CONTROLLER, SimConfig
+from emergence_lab.config import DECISION_CONTROLLER, NAMED_PROMPT_CONTROLLERS, SimConfig
 from emergence_lab.controllers.base import Controller, Decision
 from emergence_lab.controllers.evolutionary import (
     EvolutionaryController,
@@ -48,9 +48,10 @@ def make_controller(
             config = replace(
                 config,
                 controller=name,
-                llm_prompt_id=None if name in {"llm_a", "llm_b"} else config.llm_prompt_id,
+                llm_prompt_id=None if name in NAMED_PROMPT_CONTROLLERS else config.llm_prompt_id,
                 reproduction_enabled=None,
                 genome_enabled=None,
+                memory_enabled=None,
             )
             config.__post_init__()
         return LlmController(config)
@@ -106,7 +107,7 @@ class Engine:
             obs = observations[org.id]
             self.log.emit("OBSERVATION", tick, organism_id=org.id, observation=obs.to_dict())
             genome = org.genome if self.config.genome_enabled else None
-            memory = list(org.memory) if org.memory else None
+            memory = list(org.memory) if self.config.memory_enabled else None
             decision = self.controller.decide(obs, genome=genome, memory=memory)
             decisions[org.id] = decision
             if decision.llm_trace:
@@ -136,7 +137,7 @@ class Engine:
                 )
                 action = Action.STAY
             self.log.emit("ACTION", tick, organism_id=org.id, action=action.value)
-            if decision.memory_write:
+            if self.config.memory_enabled and decision.memory_write:
                 self.log.emit(
                     "MEMORY_WRITE",
                     tick,

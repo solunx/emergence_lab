@@ -680,7 +680,7 @@ De LLM is uitsluitend een decision function. Adapter-patroon: de simulator kent 
 
 Config: `llm.model`, `llm.endpoint`, `llm.temperature`, `prompt_id`. CLI: `--llm-model`, `--llm-endpoint`, `--prompt-id`. Default backend is lokaal **Ollama** (`http://127.0.0.1:11434`); andere OpenAI-achtige endpoints mogen later via dezelfde config, nooit een hardcoded modelnaam in de controllerklasse.
 
-Controller-namen: `llm` / `llm_a` (prompt A), `llm_b` (prompt B). Geen genome, geen reproductie. Elke Ollama-tag is een andere `experiment_id`.
+Controller-namen: `llm` / `llm_a` (prompt A), `llm_b` (prompt B). Geen genome, geen reproductie, geen memory. Elke Ollama-tag is een andere `experiment_id`.
 
 Thinking-modellen (o.a. Qwen3.8, R1, QwQ): `think: false` in de request; `<think>`-tags strippen vóór parse. Self-reported rationale ≠ inner reasoning.
 
@@ -724,7 +724,23 @@ memory_capacity = 20
 
 Geen embeddings, geen RAG, geen vector DB.
 
+Controller-namen: `llm_memory` / `llm_a_memory` (prompt A + memory), `llm_b_memory` (prompt B + memory). Geen genome, geen reproductie. Memory wordt nooit geërfd.
+
 De experimentele interventie is **persistente, agent-specifieke informatie**, niet “memory alleen”. C4 krijgt ook een langere prompt / meer tokens dan C3. Interpreteer verschillen niet als een zuiver geheugeneffect los van extra context.
+
+C4-A en C4-B zijn dezelfde doelen als C3-A en C3-B. Extra: memory in de prompt, en optioneel één `MEMORY:`-regel. Geen food-doel, geen “onthoud patches”.
+
+**C4-A** (default):
+
+> Choose exactly one valid action based only on the observation and your memory. Reply with exactly one of: NORTH, SOUTH, EAST, WEST, STAY on the first line. Optionally add a second line MEMORY: <one short note to keep>. Omit MEMORY to write nothing.
+
+**C4-B** (survival ablation):
+
+> Your objective is to remain alive as long as possible. Choose exactly one valid action based only on the observation and your memory. Reply with exactly one of: NORTH, SOUTH, EAST, WEST, STAY on the first line. Optionally add a second line MEMORY: <one short note to keep>. Omit MEMORY to write nothing.
+
+Daarna in beide: Observation-blok (zelfde serialisatie als C3) en `Memory:` (lege lijst → `(empty)`).
+
+C4-configs gebruiken `num_predict = 128` (C3 blijft 64) zodat een korte memory-regel niet door de sampler wordt afgekapt. Dat is een sampling-limiet, geen extra intelligentie.
 
 Timing (normatief):
 
@@ -1014,7 +1030,7 @@ llm:
   model: null          # configureerbaar, nooit hardcoded
   endpoint: null
   temperature: 0.0
-  prompt_id: llm_a     # llm_a | llm_b
+  prompt_id: llm_a     # llm_a | llm_b | llm_a_memory | llm_b_memory
   prompt_version: 1
 
 experiment:
@@ -1324,7 +1340,7 @@ emergence-lab/
 │   │   ├── reactive.py
 │   │   ├── evolutionary.py
 │   │   ├── llm.py
-│   │   └── memory.py          # C4, nog niet
+│   │   └── verification.py
 │   ├── llm/                   # prompts, parse, Ollama-client (stdlib urllib)
 │   │   ├── prompts.py
 │   │   ├── parse.py
@@ -1436,6 +1452,7 @@ Sanity: AlwaysStay op een patch zonder regen-onder-organisme sterft volgens het 
 - engine accepteert invalid en valt terug op STAY
 - C3: parse NORTH/SOUTH/EAST/WEST/STAY; garbage → STAY + `INVALID_ACTION`; raw output in `LLM_CALL`
 - C3 tests gebruiken een fake client (geen netwerk)
+- C4: parse `MEMORY:`; write T zichtbaar T+1; FIFO/cap; te lange string afkappen; invalid mag nog schrijven
 
 ### Reproducibility
 
@@ -1515,8 +1532,8 @@ Doel:
 - [x] C3 met configureerbaar model en prompt A
 - [x] prompt B als ablation
 - [x] volledige LLM decision traces (`LLM_CALL`)
-- [ ] C4 memory (list[str], cap 20); write pas zichtbaar op T+1
-- [x] `Decision.memory_write` / `rationale` (velden; C4 write-pad volgt)
+- [x] C4 memory (list[str], cap 20); write pas zichtbaar op T+1
+- [x] `Decision.memory_write` / `rationale` (C4 write-pad in LlmController + engine)
 - [x] invalid LLM output → STAY
 - [ ] LLM traces inclusief model hash, backend, quantisatie (backend=ollama, hash/quant null tot `ollama show`)
 - [ ] fast benchmark voor C3/C4

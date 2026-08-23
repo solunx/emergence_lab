@@ -145,7 +145,7 @@ python -m emergence_lab batch \
   --controllers reactive_r,evolutionary_oracle_r,evolutionary
 ```
 
-Tracked reports: [`docs/lab_log.md`](docs/lab_log.md) and [`experiments/reports/`](experiments/reports/). Economy **m1-v2** is frozen (food +30, regen 15). M1 C0/C1/C2 + oracle diagnostics are done. C3 is **model-dependent**: `qwen2.5:7b` STAY (0/20 alive, A and B); `qwen3.8:27b` harvests like C1 on the same 20 maps (A/B both 20/20 alive, food 86 / 82 vs C1 83) with a different action mix (EAST-heavy). Prompt B is a weak ablation on 27B. Next is C4 on 27B-A, not C2 feature expansion.
+Tracked reports: [`docs/lab_log.md`](docs/lab_log.md) and [`experiments/reports/`](experiments/reports/). Economy **m1-v2** is frozen (food +30, regen 15). M1 C0/C1/C2 + oracle diagnostics are done. C3 is **model-dependent**: `qwen2.5:7b` STAY (0/20 alive, A and B); `qwen3.8:27b` harvests like C1 on the same 20 maps (A/B both 20/20 alive, food 86 / 82 vs C1 83). C4-A on 27B persists 20/20 but food **70** (below C1, CI excludes 0) and almost never writes memory (1.3% of decisions). Next is C4-B on 27B, not a prompt rewrite and not C5.
 
 Later, if a candidate pattern appears, extra Python tests (permutation, survival curves, genome/lineage on hits) can argue it is not a controller bias. Those are **not** in the default summarize path. Descriptive stats stay automatic; causal claims stay manual.
 
@@ -164,7 +164,7 @@ Cost: **10 organisms × ticks sequential HTTP calls** per seed. Interrupted batc
 | Ollama tag | Role |
 | --- | --- |
 | `qwen2.5:7b` | C3-A and C3-B, seeds 1–20 × 200 ticks — STAY, 0/20 alive |
-| `qwen3.8:27b` | C3-A and C3-B, same maps — 20/20 alive, food ≈ C1 (86 / 82 vs 83) |
+| `qwen3.8:27b` | C3-A/B: 20/20 alive, food ≈ C1 (86 / 82 vs 83). C4-A: 20/20 alive, food **70** (below C1); memory writes 1.3% of decisions |
 
 Further tags are in-scope as later named batches, not silent swaps.
 
@@ -211,12 +211,23 @@ Controllers: `llm_memory` / `llm_a_memory` (prompt A + memory) and `llm_b_memory
 
 Default `num_predict` for C4 configs is 128 (C3 stays 64) so a short memory line is not truncated by the sampler.
 
+On `qwen3.8:27b` prompt A, C4 persists 20/20 with mean food **70** vs C1 83 vs C3-A 86 (paired vs C1: Δ −12.8, CI excludes 0). Writes are rare (mean 17 / run, median 7, 1.3% of calls). Numbers: [`c4a_qwen38_27b_20x200`](experiments/reports/c4a_qwen38_27b_20x200/).
+
 ```bash
 # Requires a running Ollama daemon.
 python -m emergence_lab batch \
   --experiment-id c4a_qwen38_27b_smoke \
   --seeds 1 \
   --ticks 50 \
+  --controllers random,reactive,llm_memory \
+  --llm-model qwen3.8:27b \
+  --prompt-id llm_a_memory \
+  --llm-num-predict 128
+
+python -m emergence_lab batch \
+  --experiment-id c4a_qwen38_27b_20x200 \
+  --seeds 1-20 \
+  --ticks 200 \
   --controllers random,reactive,llm_memory \
   --llm-model qwen3.8:27b \
   --prompt-id llm_a_memory \

@@ -6,18 +6,19 @@ A visually interesting GIF is not evidence of emergence.
 
 ---
 
-## Status (2026-08-18)
+## Status (2026-08-23)
 
 | Item | Value |
 |---|---|
 | Frozen economy | **m1-v2**: food `+30`, `regen_delay=15` |
 | Do not retune | food, regen, threshold, C2 mutation, C2 genome init, **C2 feature set** |
-| Completed | M1 + C2 oracle + **C3-A/B `qwen2.5:7b`** + **C3-A/B `qwen3.8:27b`** (20×200) |
+| Completed | M1 + C2 oracle + C3-A/B 7B + C3-A/B 27B + **C4-A `qwen3.8:27b`** (20×200) |
 | C2 why | (1) 9-bit ceiling vs C1; (2) bootstrap; (3) even oracle_r is weak vs C1-R |
 | C3 why (7B) | A and B are **STAY**: 0/20 alive, food 1.6 / 1.3 vs C0 7.2 vs C1 83 |
-| C3 why (27B) | A and B both **20/20 alive**, food **86 / 82** (ties with C1 83). EAST+N/S, not C1 (entropy ~0.99 vs 2.3). B is not a second phenotype; end energy is lower (664 vs A 924 / C1 846). C3 is **model-dependent**; prompt B is a weak ablation on 27B |
-| Next | **C4 LLM + Memory** on `qwen3.8:27b` prompt A (after the write path exists) |
-| Not next | rewriting prompts to rescue 7B; C2 feature expansion; treating 27B harvest as emergence; 1000-tick C3; C5 before C4 |
+| C3 why (27B) | A and B both **20/20 alive**, food **86 / 82** (ties with C1 83). EAST+N/S, not C1 (entropy ~0.99 vs 2.3) |
+| C4 why (27B-A) | **20/20 alive**, food **70** — **below C1** (Δ −12.8, CI under 0). Memory used on **1.3%** of decisions (median 7 writes/run). Longer prompt + sparse writes, not a working map |
+| Next | **C4-B `qwen3.8:27b`** on the same 20 maps |
+| Not next | rewriting C4 prompts to rescue harvest; C5 before C4-B; 7B-C4; treating 27B harvest as emergence |
 
 C2 fails because the phenotype cannot be C1 **and** random-init evolution rarely finds even the cardinal policy that *is* in the space. That is a result, not a reason to retune C2.
 
@@ -251,3 +252,21 @@ This is specified, not a bug. It means C2-failure is not yet “evolution cannot
 - **Interpretation:** prompt B does not create a second 27B phenotype and does not induce 7B-style STAY. Sampled logs stay EAST-heavy with a little STAY/WEST. Harvest still ties C1; the cash is thinner. On 7B, B tightened STAY; on 27B it is a weak ablation. C3-A vs C3-B is not the 27B story. Scale is.
 - **Not claimed:** emergence, inner reasoning, 1000-tick persistence, that B “teaches survival.”
 - **Decision:** C3 A/B × 7B/27B is closed. Next is C4 (memory) on 27B prompt A, not a prompt rewrite and not C5.
+
+## 2026-08-22 — `c4a_qwen38_27b_smoke`
+
+- **Git:** `e865cc9ec26ca4a116b5afbc32153475e810f941`
+- **Report:** [experiments/reports/c4a_qwen38_27b_smoke/](../experiments/reports/c4a_qwen38_27b_smoke/)
+- **Design:** seed 1, 50 ticks, C0 / C1 / C4-A (`qwen3.8:27b`, prompt A + memory). Same map as the C3 27B smoke.
+- **Headline:** 500 calls, 0 invalid, ~984 ms/call, **2** writes. Food C1 25 / C0 4 / C4-A **16** (C3-A smoke: 29). Pop 9. EAST+WEST, 0 STAY.
+- **Interpretation:** pipeline works; not a STAY collapse. Weaker harvest than C3-A on this seed. Need 20×200.
+
+## 2026-08-23 — `c4a_qwen38_27b_20x200`
+
+- **Git:** `e865cc9ec26ca4a116b5afbc32153475e810f941`
+- **Report:** [experiments/reports/c4a_qwen38_27b_20x200/](../experiments/reports/c4a_qwen38_27b_20x200/)
+- **Design:** seeds 1–20, 200 ticks, C0 / C1 / C4-A (`qwen3.8:27b`, prompt A + memory). Same maps as 27B C3-A.
+- **Headline:** **20/20 alive**, mean food **70.3** (C1 83.2, C3-A 86.0). Paired food vs C1: Δ **−12.8**, CI [−22.8, −2.8], 7/13 split — **not a tie**. Pop 3.45 vs C1 4.95. Energy 517 vs C1 846 vs C3-A 924. Writes mean 17 / median 7 (0–78), **1.3%** of ~26.5k calls. Invalid ≈ 0. ~1.13 s/call.
+- **Interpretation:** C4-A persists but harvests worse than C1 and C3-A. Memory is mostly unused; the typical prompt still shows `(empty)`. EAST remains dominant with more WEST/STAY than C3-A. Seed 16 wrote the most (74) and still under-harvested vs C3-A (61 vs 127). Do not treat this as a pure memory effect: the prompt is longer even with an empty list.
+- **Not claimed:** emergence, a working spatial map, that memory *caused* the food drop, 1000-tick persistence.
+- **Decision:** C4-B on `qwen3.8:27b`, same 20 maps (`c4b_qwen38_27b_20x200`). Do not rewrite the C4 prompt to look better.

@@ -6,19 +6,20 @@ A visually interesting GIF is not evidence of emergence.
 
 ---
 
-## Status (2026-08-23)
+## Status (2026-08-24)
 
 | Item | Value |
 |---|---|
 | Frozen economy | **m1-v2**: food `+30`, `regen_delay=15` |
 | Do not retune | food, regen, threshold, C2 mutation, C2 genome init, **C2 feature set** |
-| Completed | M1 + C2 oracle + C3-A/B 7B + C3-A/B 27B + **C4-A `qwen3.8:27b`** (20×200) |
+| Completed | M1 + C2 oracle + C3-A/B 7B + C3-A/B 27B + **C4-A/B `qwen3.8:27b`** (20×200) |
 | C2 why | (1) 9-bit ceiling vs C1; (2) bootstrap; (3) even oracle_r is weak vs C1-R |
 | C3 why (7B) | A and B are **STAY**: 0/20 alive, food 1.6 / 1.3 vs C0 7.2 vs C1 83 |
 | C3 why (27B) | A and B both **20/20 alive**, food **86 / 82** (ties with C1 83). EAST+N/S, not C1 (entropy ~0.99 vs 2.3) |
-| C4 why (27B-A) | **20/20 alive**, food **70** — **below C1** (Δ −12.8, CI under 0). Memory used on **1.3%** of decisions (median 7 writes/run). Longer prompt + sparse writes, not a working map |
-| Next | **C4-B `qwen3.8:27b`** on the same 20 maps |
-| Not next | rewriting C4 prompts to rescue harvest; C5 before C4-B; 7B-C4; treating 27B harvest as emergence |
+| C4 why (27B-A) | **20/20 alive**, food **70** — below C1. Writes **1.3%** of decisions |
+| C4 why (27B-B) | **20/20 alive**, food **35** — far below C1 (Δ −48.6, 0/20). Writes **20%**. Thin pop (9 seeds end at 1). B is a strong ablation only once memory is on |
+| Next | **C5 (LLM + evolution)** — implement first, then a 27B smoke. No C5 batch until that exists |
+| Not next | rewriting C4 prompts; 7B-C4; 1000-tick C4; treating 27B harvest as emergence |
 
 C2 fails because the phenotype cannot be C1 **and** random-init evolution rarely finds even the cardinal policy that *is* in the space. That is a result, not a reason to retune C2.
 
@@ -270,3 +271,14 @@ This is specified, not a bug. It means C2-failure is not yet “evolution cannot
 - **Interpretation:** C4-A persists but harvests worse than C1 and C3-A. Memory is mostly unused; the typical prompt still shows `(empty)`. EAST remains dominant with more WEST/STAY than C3-A. Seed 16 wrote the most (74) and still under-harvested vs C3-A (61 vs 127). Do not treat this as a pure memory effect: the prompt is longer even with an empty list.
 - **Not claimed:** emergence, a working spatial map, that memory *caused* the food drop, 1000-tick persistence.
 - **Decision:** C4-B on `qwen3.8:27b`, same 20 maps (`c4b_qwen38_27b_20x200`). Do not rewrite the C4 prompt to look better.
+
+## 2026-08-23 — `c4b_qwen38_27b_20x200`
+
+- **Git:** `0a85cc5df853d51abe2ba5d0accd4aee09211adb`
+- **Report:** [experiments/reports/c4b_qwen38_27b_20x200/](../experiments/reports/c4b_qwen38_27b_20x200/)
+- **Design:** seeds 1–20, 200 ticks, C0 / C1 / C4-B (`qwen3.8:27b`, prompt B + memory). Same maps as C4-A.
+- **Interrupt:** seed 11 killed mid-run (other local inference on the same GPU). First folder is snapshots only. Resume re-ran seed 11 from tick 0. C0/C1 still match prior batches. Invalid 0. No effect on the published numbers.
+- **Headline:** **20/20 alive**, mean food **34.5** (C1 83.2, C4-A 70.3, C3-B 82.4). Paired vs C1: food Δ **−48.6**, CI [−55.8, −41.4], **0/20 higher**. Pop 1.80 (9 seeds at 1). Writes mean **191** (20% of ~19k calls) vs C4-A 1.3%. Invalid 0. ~1.40 s/call.
+- **Interpretation:** C4-B persists but harvests much worse than C4-A and C3-B. “Remain alive” plus memory is a real ablation here: more writes, more mixed actions (NORTH/STAY appear), thinner remainder. Not 7B-STAY (food ≫ C0). Seed 17 wrote the most (434) and took 22 food.
+- **Not claimed:** that the interrupt biased the batch; that B teaches survival; emergence; a working map.
+- **Decision:** C4 A/B on 27B is closed. Next is **C5 code** (genome in the prompt + C2-like births), then a 27B smoke — not a prompt rewrite.

@@ -221,7 +221,7 @@ def _add_llm_flags(parser: argparse.ArgumentParser) -> None:
         "--llm-model",
         type=str,
         default=None,
-        help="Ollama tag, e.g. qwen2.5:7b. Required for llm/llm_a/llm_b/llm_memory. Never hardcoded.",
+        help="Ollama tag, e.g. qwen2.5:7b. Required for llm* controllers. Never hardcoded.",
     )
     parser.add_argument(
         "--llm-endpoint",
@@ -233,8 +233,15 @@ def _add_llm_flags(parser: argparse.ArgumentParser) -> None:
         "--prompt-id",
         type=str,
         default=None,
-        choices=["llm_a", "llm_b", "llm_a_memory", "llm_b_memory"],
-        help="C3: llm_a / llm_b. C4: llm_a_memory / llm_b_memory. Named controllers force their prompt.",
+        choices=[
+            "llm_a",
+            "llm_b",
+            "llm_a_memory",
+            "llm_b_memory",
+            "llm_a_evolution",
+            "llm_b_evolution",
+        ],
+        help="C3: llm_a / llm_b. C4: *_memory. C5: *_evolution. Named controllers force their prompt.",
     )
     parser.add_argument("--llm-temperature", type=float, default=None)
     parser.add_argument("--llm-timeout", type=float, default=None, help="Seconds per LLM call")

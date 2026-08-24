@@ -764,9 +764,21 @@ Memory bevat alleen wat dit organisme zelf schrijft. Niet geërfd. Gelogd per wr
 
 ### 9.6 C5 — LLM + Evolution
 
-Genome uit §9.3 wordt als compacte context aan de LLM gegeven (bijv. de 45 weights of een korte samenvatting in de prompt). Het genome **dwingt geen actie af**. De LLM blijft de decision maker.
+Identiek aan C3, plus het C2-genome als compacte prompt-context. Het genome **dwingt geen actie af**. De LLM blijft de decision maker.
 
-Reproductie en mutatie zoals C2.
+Controller-namen: `llm_evolution` / `llm_a_evolution` (prompt A + genome), `llm_b_evolution` (prompt B + genome). Reproductie en mutatie zoals C2 (`mutation_probability`, `mutation_strength`, init-range ongewijzigd). Geen memory. Memory wordt nooit geërfd.
+
+De 45 weights zijn dezelfde encoding als C2 (5 acties × 9 features). C5 is geen C2-argmax in de LLM. Interpreteer C5−C3 niet als “alleen evolutie”: C5 heeft births, mutatie, een langere prompt, en population dynamics.
+
+**C5-A** (default):
+
+> Choose exactly one valid action based on the observation. You also have an inherited genome of 45 weights. The genome does not require any action. Reply with exactly one of: NORTH, SOUTH, EAST, WEST, STAY.
+
+**C5-B** (survival ablation):
+
+> Your objective is to remain alive as long as possible. Choose exactly one valid action based on the observation. You also have an inherited genome of 45 weights. The genome does not require any action. Reply with exactly one of: NORTH, SOUTH, EAST, WEST, STAY.
+
+Daarna: Observation-blok (zelfde serialisatie als C3) en `Genome:` (5 regels weights + featurenamen). Geen food-doel, geen “volg de argmax”.
 
 ### 9.7 C6 — LLM + Evolution + Memory
 
@@ -798,7 +810,7 @@ C7 = ontogenetisch (bijv. minimaal RL). Pas Milestone 4. Niet in v0.1 bouwen.
 | C5 | LLM + Evolution | Yes | No | Yes | 3 |
 | C6 | LLM + Evolution + Memory | Yes | Yes | Yes | 3 |
 
-LLM-B (survival prompt) is een ablation op C3/C4, geen eigen ID in deze tabel.
+LLM-B (survival prompt) is een ablation op C3/C4/C5, geen eigen ID in deze tabel.
 
 Nieuwe capabilities (communicatie, object manipulation, culture, online learning, prompt evolution) horen niet in v0.1.
 
@@ -1030,7 +1042,7 @@ llm:
   model: null          # configureerbaar, nooit hardcoded
   endpoint: null
   temperature: 0.0
-  prompt_id: llm_a     # llm_a | llm_b | llm_a_memory | llm_b_memory
+  prompt_id: llm_a     # llm_a | llm_b | llm_a_memory | llm_b_memory | llm_a_evolution | llm_b_evolution
   prompt_version: 1
 
 experiment:
@@ -1452,7 +1464,7 @@ Sanity: AlwaysStay op een patch zonder regen-onder-organisme sterft volgens het 
 - engine accepteert invalid en valt terug op STAY
 - C3: parse NORTH/SOUTH/EAST/WEST/STAY; garbage → STAY + `INVALID_ACTION`; raw output in `LLM_CALL`
 - C3 tests gebruiken een fake client (geen netwerk)
-- C4: parse `MEMORY:`; write T zichtbaar T+1; FIFO/cap; te lange string afkappen; invalid mag nog schrijven
+- C5: genome in de prompt; LLM kiest de actie; reproductie/mutatie zoals C2; genome dwingt geen actie af
 
 ### Reproducibility
 
@@ -1540,7 +1552,8 @@ Doel:
 
 ### Milestone 3
 
-- [ ] C5 en C6
+- [x] C5 genome-in-prompt + C2-reproductie (C6 volgt)
+- [ ] C6
 - [ ] automatische vergelijking tussen controllers op clones + seeds
 
 ---

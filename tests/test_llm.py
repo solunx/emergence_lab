@@ -4,7 +4,7 @@ from emergence_lab.config import SimConfig
 from emergence_lab.controllers.llm import LlmController
 from emergence_lab.llm.ollama import FakeLlmClient
 from emergence_lab.llm.parse import parse_action, parse_llm_output
-from emergence_lab.llm.prompts import prompt_text
+from emergence_lab.llm.prompts import format_genome, prompt_text
 from emergence_lab.simulation.engine import Engine, make_controller
 from emergence_lab.simulation.rng import RNGBundle
 from emergence_lab.world.types import Action
@@ -261,3 +261,126 @@ def test_make_controller_llm_requires_config():
     mem = make_controller("llm_memory", rng, SimConfig(controller="llm", llm_model="fake"))
     assert mem.prompt_id == "llm_a_memory"
     assert mem.config.memory_enabled is True
+    evo = make_controller(
+        "llm_evolution", rng, SimConfig(controller="llm", llm_model="fake")
+    )
+    assert evo.prompt_id == "llm_a_evolution"
+    assert evo.config.genome_enabled is True
+    assert evo.config.reproduction_enabled is True
+    assert evo.config.memory_enabled is False
+
+
+def test_c5_flags_and_prompt_mapping():
+    evo = SimConfig(controller="llm_evolution")
+    assert evo.genome_enabled is True
+    assert evo.reproduction_enabled is True
+    assert evo.memory_enabled is False
+    assert evo.llm_prompt_id == "llm_a_evolution"
+    b = SimConfig(controller="llm_b_evolution")
+    assert b.llm_prompt_id == "llm_b_evolution"
+    coerced = SimConfig(controller="llm_evolution", llm_prompt_id="llm_b")
+    assert coerced.llm_prompt_id == "llm_b_evolution"
+    c3 = SimConfig(controller="llm")
+    assert c3.genome_enabled is False
+    assert c3.llm_prompt_id == "llm_a"
+
+
+def test_yaml_c5_block():
+    root = Path(__file__).resolve().parents[1]
+    cfg = SimConfig.from_yaml(root / "experiments" / "configs" / "c5_ollama.yaml")
+    assert cfg.controller == "llm_evolution"
+    assert cfg.genome_enabled is True
+    assert cfg.reproduction_enabled is True
+    assert cfg.memory_enabled is False
+    assert cfg.llm_prompt_id == "llm_a_evolution"
+    assert cfg.llm_num_predict == 64
+    assert cfg.llm_model is None
+
+
+def test_c5_prompts_are_a_b_plus_genome():
+    zeros = tuple([0.0] * 45)
+    a = prompt_text("llm_a_evolution", "GRID", genome=zeros)
+    b = prompt_text("llm_b_evolution", "GRID", genome=zeros)
+    assert "remain alive" not in a.lower()
+    assert "food" not in a.lower()
+    assert "does not require any action" in a
+    assert "NORTH: 0.000" in a
+    assert "Features:" in a
+    assert "argmax" not in a.lower()
+    assert "MEMORY:" not in a
+    assert "remain alive as long as possible" in b.lower()
+    assert "Genome:" in b
+    assert "Memory:" not in a
+    assert "{genome}" not in prompt_text("llm_a", "GRID")
+    assert "Genome:" not in prompt_text("llm_a", "GRID")
+
+
+def test_format_genome_none_and_layout():
+    assert format_genome(None) == "(none)"
+    text = format_genome(tuple([0.0] * 45))
+    assert text.count(":") == 6  # 5 actions + Features line
+
+
+def test_c5_genome_in_prompt_does_not_force_action():
+    config = SimConfig(
+        width=8,
+        height=8,
+        resource_count=0,
+        initial_population=1,
+        ticks=1,
+        seed=1,
+        controller="llm_evolution",
+        llm_model="fake",
+        regen_delay=15,
+    )
+    rng = RNGBundle.from_seed(1)
+    state = generate_world(config, rng.world, rng.evolution)
+    org = state.living()[0]
+    assert org.genome is not None
+    client = FakeLlmClient(["EAST\nMEMORY: ignore me"])
+    engine = Engine(state, rng, LlmController(config, client=client), check_invariants=True)
+    engine.step(0)
+    traces = [e for e in engine.log.events if e.kind == "LLM_CALL"]
+    assert len(traces) == 1
+    prompt = traces[0].payload["prompt"]
+    assert "Genome:" in prompt
+    assert "does not require any action" in prompt
+    assert "Memory:" not in prompt
+    sample = f"{org.genome[0]:.3f}"
+    assert sample in prompt
+    actions = [e.payload["action"] for e in engine.log.events if e.kind == "ACTION"]
+    assert actions[0] == "MOVE_EAST"
+    assert all(e.kind != "MEMORY_WRITE" for e in engine.log.events)
+    assert org.memory == []
+
+
+def test_c5_reproduces_and_child_has_genome():
+    config = SimConfig(
+        width=8,
+        height=8,
+        resource_count=0,
+        initial_population=1,
+        ticks=1,
+        seed=1,
+        controller="llm_evolution",
+        llm_model="fake",
+        regen_delay=15,
+        initial_energy=160,
+    )
+    rng = RNGBundle.from_seed(1)
+    state = generate_world(config, rng.world, rng.evolution)
+    parent = state.living()[0]
+    parent_genome = parent.genome
+    client = FakeLlmClient(["STAY"])
+    engine = Engine(state, rng, LlmController(config, client=client), check_invariants=True)
+    engine.step(0)
+    children = [org for org in state.organisms if org.parent_id == parent.id]
+    assert len(children) == 1
+    child = children[0]
+    assert child.genome is not None
+    assert child.memory == []
+    assert child.generation == 1
+    assert parent_genome is not None
+    assert len(child.genome) == len(parent_genome)
+    assert any(e.kind == "BIRTH" for e in engine.log.events)
+

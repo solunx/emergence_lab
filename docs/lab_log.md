@@ -12,14 +12,14 @@ A visually interesting GIF is not evidence of emergence.
 |---|---|
 | Frozen economy | **m1-v2**: food `+30`, `regen_delay=15` |
 | Do not retune | food, regen, threshold, C2 mutation, C2 genome init, **C2 feature set** |
-| Completed | M1 + C2 oracle + C3-A/B 7B + C3-A/B 27B + **C4-A/B `qwen3.8:27b`** (20×200) |
+| Completed | M1 + C2 oracle + C3-A/B 7B + C3-A/B 27B + **C4-A/B `qwen3.8:27b`** (20×200) + **C5 code** |
 | C2 why | (1) 9-bit ceiling vs C1; (2) bootstrap; (3) even oracle_r is weak vs C1-R |
 | C3 why (7B) | A and B are **STAY**: 0/20 alive, food 1.6 / 1.3 vs C0 7.2 vs C1 83 |
 | C3 why (27B) | A and B both **20/20 alive**, food **86 / 82** (ties with C1 83). EAST+N/S, not C1 (entropy ~0.99 vs 2.3) |
 | C4 why (27B-A) | **20/20 alive**, food **70** — below C1. Writes **1.3%** of decisions |
 | C4 why (27B-B) | **20/20 alive**, food **35** — far below C1 (Δ −48.6, 0/20). Writes **20%**. Thin pop (9 seeds end at 1). B is a strong ablation only once memory is on |
-| Next | **C5 (LLM + evolution)** — implement first, then a 27B smoke. No C5 batch until that exists |
-| Not next | rewriting C4 prompts; 7B-C4; 1000-tick C4; treating 27B harvest as emergence |
+| Next | **C5 27B smoke** (`c5a_qwen38_27b_smoke`, seed 1 × 50 ticks). No 20×200 until that exists |
+| Not next | rewriting C3/C4/C5 prompts; 7B-C4; 1000-tick C4; C6; treating 27B harvest as emergence |
 
 C2 fails because the phenotype cannot be C1 **and** random-init evolution rarely finds even the cardinal policy that *is* in the space. That is a result, not a reason to retune C2.
 
@@ -282,3 +282,10 @@ This is specified, not a bug. It means C2-failure is not yet “evolution cannot
 - **Interpretation:** C4-B persists but harvests much worse than C4-A and C3-B. “Remain alive” plus memory is a real ablation here: more writes, more mixed actions (NORTH/STAY appear), thinner remainder. Not 7B-STAY (food ≫ C0). Seed 17 wrote the most (434) and took 22 food.
 - **Not claimed:** that the interrupt biased the batch; that B teaches survival; emergence; a working map.
 - **Decision:** C4 A/B on 27B is closed. Next is **C5 code** (genome in the prompt + C2-like births), then a 27B smoke — not a prompt rewrite.
+
+## 2026-08-24 — C5 implemented (no batch yet)
+
+- **What:** `llm_evolution` / `llm_a_evolution` (C5-A) and `llm_b_evolution` (C5-B). Same C2 genome (45 weights) as compact prompt context; LLM still chooses the action. Reproduction/mutation like C2. No memory. Config: `experiments/configs/c5_ollama.yaml`. Controller version `m3-c5-v1`.
+- **Prompts:** C3-A/B plus “inherited genome of 45 weights. The genome does not require any action.” plus a `Genome:` dump (five action lines + C2 feature names). No argmax, no food objective, no `MEMORY:`.
+- **Confound:** C5 vs C3 is not a pure evolution contrast — longer prompt, births, mutation, extra LLM calls as population grows.
+- **Decision:** run a 27B smoke first (`c5a_qwen38_27b_smoke`, seed 1 × 50, C0/C1/`llm_evolution`). Keep the GPU exclusive. No 20×200 and no C6 until that smoke exists.

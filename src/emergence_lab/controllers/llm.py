@@ -1,4 +1,4 @@
-"""C3/C4: LLM as a decision function. Prompts come from config, not this class."""
+"""C3–C5: LLM as a decision function. Prompts come from config, not this class."""
 
 from __future__ import annotations
 
@@ -9,7 +9,13 @@ from emergence_lab.config import SimConfig
 from emergence_lab.controllers.base import Controller, Decision
 from emergence_lab.llm.ollama import LlmClient, LlmResponse, OllamaClient
 from emergence_lab.llm.parse import parse_llm_output
-from emergence_lab.llm.prompts import MEMORY_PROMPT_IDS, PROMPTS, prompt_hash, prompt_text
+from emergence_lab.llm.prompts import (
+    EVOLUTION_PROMPT_IDS,
+    MEMORY_PROMPT_IDS,
+    PROMPTS,
+    prompt_hash,
+    prompt_text,
+)
 from emergence_lab.world.observation import Observation
 from emergence_lab.world.types import Action
 
@@ -56,10 +62,12 @@ class LlmController(Controller):
     ) -> Decision:
         block = format_observation(observation)
         memory_on = bool(self.config.memory_enabled) or self.prompt_id in MEMORY_PROMPT_IDS
+        genome_on = bool(self.config.genome_enabled) or self.prompt_id in EVOLUTION_PROMPT_IDS
         prompt = prompt_text(
             self.prompt_id,
             block,
             memory=memory if memory_on else None,
+            genome=genome if genome_on else None,
         )
         started = time.perf_counter()
         response: LlmResponse = self.client.complete(prompt)

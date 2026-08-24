@@ -37,6 +37,8 @@ CONTROLLER_ORDER = (
     "llm_a_memory",
     "llm_b_memory",
     "llm_evolution",
+    "llm_a_evolution",
+    "llm_b_evolution",
     "llm_evolution_memory",
 )
 

@@ -145,7 +145,7 @@ python -m emergence_lab batch \
   --controllers reactive_r,evolutionary_oracle_r,evolutionary
 ```
 
-Tracked reports: [`docs/lab_log.md`](docs/lab_log.md) and [`experiments/reports/`](experiments/reports/). Economy **m1-v2** is frozen (food +30, regen 15). M1 C0/C1/C2 + oracle diagnostics are done. C3 is **model-dependent**: `qwen2.5:7b` STAY (0/20 alive, A and B); `qwen3.8:27b` harvests like C1 (A/B food 86 / 82 vs C1 83). C4-A on 27B persists but food **70** (below C1) with rare writes (1.3%). C4-B persists with food **35** (0/20 vs C1) and writes **20%** of decisions. C5 code is in; next is a 27B smoke, not a 20×200 and not a prompt rewrite.
+Tracked reports: [`docs/lab_log.md`](docs/lab_log.md) and [`experiments/reports/`](experiments/reports/). Economy **m1-v2** is frozen (food +30, regen 15). M1 C0/C1/C2 + oracle diagnostics are done. C3 is **model-dependent**: `qwen2.5:7b` STAY (0/20 alive, A and B); `qwen3.8:27b` harvests like C1 (A/B food 86 / 82 vs C1 83). C4-A on 27B persists but food **70** (below C1) with rare writes (1.3%). C4-B persists with food **35** (0/20 vs C1) and writes **20%** of decisions. C5-A on 27B persists with food **56** (below C1/C3-A/C4-A), **20/20 births**, shallow lineages (median max gen 1). Next is C5-B, not a prompt rewrite.
 
 Later, if a candidate pattern appears, extra Python tests (permutation, survival curves, genome/lineage on hits) can argue it is not a controller bias. Those are **not** in the default summarize path. Descriptive stats stay automatic; causal claims stay manual.
 
@@ -164,7 +164,7 @@ Cost: **10 organisms × ticks sequential HTTP calls** per seed. Interrupted batc
 | Ollama tag | Role |
 | --- | --- |
 | `qwen2.5:7b` | C3-A and C3-B, seeds 1–20 × 200 ticks — STAY, 0/20 alive |
-| `qwen3.8:27b` | C3-A/B: food ≈ C1 (86 / 82). C4-A: food **70**, writes 1.3%. C4-B: food **35**, writes 20%; 9/20 end at pop 1 |
+| `qwen3.8:27b` | C3-A/B: food ≈ C1 (86 / 82). C4-A: food **70**, writes 1.3%. C4-B: food **35**, writes 20%. C5-A: food **56**, births 100%, max gen median 1 |
 
 Further tags are in-scope as later named batches, not silent swaps.
 
@@ -251,6 +251,8 @@ Controllers: `llm_evolution` / `llm_a_evolution` (prompt A + genome) and `llm_b_
 
 Do not read C5−C3 as “only evolution.” C5 has births, mutation, a longer prompt, and population dynamics. Births also mean more LLM calls than a same-tick C3/C4 run. Same-seed C2 and C5 clones share founder genomes (evolution RNG after layout).
 
+On `qwen3.8:27b` prompt A, C5 persists 20/20 with mean food **56** vs C1 83 vs C3-A 86 vs C4-A 70 (paired vs C1: Δ −27, CI excludes 0). Every seed births (mean 3.7); median max generation is **1**. Energy **280**. Entropy **1.90** (more STAY/mix than C3-A). Numbers: [`c5a_qwen38_27b_smoke`](experiments/reports/c5a_qwen38_27b_smoke/), [`c5a_qwen38_27b_20x200`](experiments/reports/c5a_qwen38_27b_20x200/).
+
 ```bash
 # Requires a running Ollama daemon. Keep the GPU exclusive (C4-B seed 11 was killed by another local job).
 python -m emergence_lab batch \
@@ -260,9 +262,34 @@ python -m emergence_lab batch \
   --controllers random,reactive,llm_evolution \
   --llm-model qwen3.8:27b \
   --prompt-id llm_a_evolution
+
+python -m emergence_lab batch \
+  --experiment-id c5a_qwen38_27b_20x200 \
+  --seeds 1-20 \
+  --ticks 200 \
+  --controllers random,reactive,llm_evolution \
+  --llm-model qwen3.8:27b \
+  --prompt-id llm_a_evolution
+
+# Next: C5-B ablation (optional smoke first)
+python -m emergence_lab batch \
+  --experiment-id c5b_qwen38_27b_smoke \
+  --seeds 1 \
+  --ticks 50 \
+  --controllers random,reactive,llm_b_evolution \
+  --llm-model qwen3.8:27b \
+  --prompt-id llm_b_evolution
+
+python -m emergence_lab batch \
+  --experiment-id c5b_qwen38_27b_20x200 \
+  --seeds 1-20 \
+  --ticks 200 \
+  --controllers random,reactive,llm_b_evolution \
+  --llm-model qwen3.8:27b \
+  --prompt-id llm_b_evolution
 ```
 
-No 20×200 until that smoke exists. C6 is not built.
+C5-A on 27B is closed. C6 is not built.
 
 ## Project layout
 

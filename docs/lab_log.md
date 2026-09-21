@@ -6,20 +6,21 @@ A visually interesting GIF is not evidence of emergence.
 
 ---
 
-## Status (2026-08-24)
+## Status (2026-09-21)
 
 | Item | Value |
 |---|---|
 | Frozen economy | **m1-v2**: food `+30`, `regen_delay=15` |
 | Do not retune | food, regen, threshold, C2 mutation, C2 genome init, **C2 feature set** |
-| Completed | M1 + C2 oracle + C3-A/B 7B + C3-A/B 27B + **C4-A/B `qwen3.8:27b`** (20×200) + **C5 code** |
+| Completed | M1 + C2 oracle + C3-A/B 7B + C3-A/B 27B + C4-A/B 27B + **C5 code** + **C5-A `qwen3.8:27b`** (20×200) |
 | C2 why | (1) 9-bit ceiling vs C1; (2) bootstrap; (3) even oracle_r is weak vs C1-R |
 | C3 why (7B) | A and B are **STAY**: 0/20 alive, food 1.6 / 1.3 vs C0 7.2 vs C1 83 |
 | C3 why (27B) | A and B both **20/20 alive**, food **86 / 82** (ties with C1 83). EAST+N/S, not C1 (entropy ~0.99 vs 2.3) |
 | C4 why (27B-A) | **20/20 alive**, food **70** — below C1. Writes **1.3%** of decisions |
 | C4 why (27B-B) | **20/20 alive**, food **35** — far below C1 (Δ −48.6, 0/20). Writes **20%**. Thin pop (9 seeds end at 1). B is a strong ablation only once memory is on |
-| Next | **C5 27B smoke** (`c5a_qwen38_27b_smoke`, seed 1 × 50 ticks). No 20×200 until that exists |
-| Not next | rewriting C3/C4/C5 prompts; 7B-C4; 1000-tick C4; C6; treating 27B harvest as emergence |
+| C5 why (27B-A) | **20/20 alive**, **20/20 births**, food **56** — below C1/C3-A/C4-A. Max gen median **1**. Energy **280**. Entropy **1.90**. Genome+births did not raise harvest |
+| Next | **C5-B** (`c5b_qwen38_27b_20x200`, `llm_b_evolution`) on the same 20 maps. Smoke first optional |
+| Not next | rewriting C5 prompts; C6; treating births as evolution; C3-R before C5-B closes |
 
 C2 fails because the phenotype cannot be C1 **and** random-init evolution rarely finds even the cardinal policy that *is* in the space. That is a result, not a reason to retune C2.
 
@@ -289,3 +290,21 @@ This is specified, not a bug. It means C2-failure is not yet “evolution cannot
 - **Prompts:** C3-A/B plus “inherited genome of 45 weights. The genome does not require any action.” plus a `Genome:` dump (five action lines + C2 feature names). No argmax, no food objective, no `MEMORY:`.
 - **Confound:** C5 vs C3 is not a pure evolution contrast — longer prompt, births, mutation, extra LLM calls as population grows.
 - **Decision:** run a 27B smoke first (`c5a_qwen38_27b_smoke`, seed 1 × 50, C0/C1/`llm_evolution`). Keep the GPU exclusive. No 20×200 and no C6 until that smoke exists.
+
+## 2026-08-24 — `c5a_qwen38_27b_smoke`
+
+- **Git:** `d8d88672602ed547df6e79f8fa09cac470feb8b8`
+- **Report:** [experiments/reports/c5a_qwen38_27b_smoke/](../experiments/reports/c5a_qwen38_27b_smoke/)
+- **Design:** seed 1, 50 ticks, C0 / C1 / C5-A (`qwen3.8:27b`, prompt A + genome). Same map as C3/C4 27B smokes.
+- **Headline:** 580 calls, 0 invalid, ~1.32 s/call, 0 writes. Food C1 25 / C0 4 / C5-A **23**. Pop **12** (3 births). EAST+STAY mix.
+- **Interpretation:** pipeline works; short-horizon food ≈ C1 does not predict the 200-tick gap. Need 20×200.
+
+## 2026-09-15 / 2026-09-21 — `c5a_qwen38_27b_20x200`
+
+- **Git:** `d8d88672602ed547df6e79f8fa09cac470feb8b8`
+- **Report:** [experiments/reports/c5a_qwen38_27b_20x200/](../experiments/reports/c5a_qwen38_27b_20x200/)
+- **Design:** seeds 1–20, 200 ticks, C0 / C1 / C5-A (`qwen3.8:27b`, prompt A + genome + C2 births). Same maps as 27B C3-A/C4-A. Seeds 1–18 on 2026-09-15; 19–20 resumed 2026-09-21.
+- **Headline:** **20/20 alive**, **20/20 any birth**, mean food **56.2** (C1 83.2, C3-A 86.0, C4-A 70.3). Paired food vs C1: Δ **−27.0**, CI [−36.5, −17.4], 3/20 higher. Pop 4.10, energy **280**, births 3.7, max gen mean 1.5 / med 1. Entropy **1.90**. Invalid 0.
+- **Interpretation:** C5-A persists but harvests worse than C1, C3-A, and C4-A. Births are reliable but shallow (median gen 1). Mid-run pop is high then thins. Phenotype is more mixed / STAY-heavy than C3-A’s EAST sweep. Do not treat as a pure evolution effect: longer prompt + births + mutation + extra LLM calls.
+- **Not claimed:** that the genome is followed; deep selection; that births help food; emergence; C2 rescue.
+- **Decision:** C5-A on 27B is closed. Next is **C5-B** (`c5b_qwen38_27b_20x200`, `llm_b_evolution`) on the same maps. Do not rewrite the C5 prompt. C6 waits.

@@ -6,21 +6,22 @@ A visually interesting GIF is not evidence of emergence.
 
 ---
 
-## Status (2026-09-21)
+## Status (2026-09-22)
 
 | Item | Value |
 |---|---|
 | Frozen economy | **m1-v2**: food `+30`, `regen_delay=15` |
 | Do not retune | food, regen, threshold, C2 mutation, C2 genome init, **C2 feature set** |
-| Completed | M1 + C2 oracle + C3-A/B 7B + C3-A/B 27B + C4-A/B 27B + **C5 code** + **C5-A `qwen3.8:27b`** (20×200) |
+| Completed | M1 + C2 oracle + C3-A/B 7B + C3-A/B 27B + C4-A/B 27B + **C5-A/B `qwen3.8:27b`** (20×200) |
 | C2 why | (1) 9-bit ceiling vs C1; (2) bootstrap; (3) even oracle_r is weak vs C1-R |
 | C3 why (7B) | A and B are **STAY**: 0/20 alive, food 1.6 / 1.3 vs C0 7.2 vs C1 83 |
 | C3 why (27B) | A and B both **20/20 alive**, food **86 / 82** (ties with C1 83). EAST+N/S, not C1 (entropy ~0.99 vs 2.3) |
 | C4 why (27B-A) | **20/20 alive**, food **70** — below C1. Writes **1.3%** of decisions |
 | C4 why (27B-B) | **20/20 alive**, food **35** — far below C1 (Δ −48.6, 0/20). Writes **20%**. Thin pop (9 seeds end at 1). B is a strong ablation only once memory is on |
-| C5 why (27B-A) | **20/20 alive**, **20/20 births**, food **56** — below C1/C3-A/C4-A. Max gen median **1**. Energy **280**. Entropy **1.90**. Genome+births did not raise harvest |
-| Next | **C5-B** (`c5b_qwen38_27b_20x200`, `llm_b_evolution`) on the same 20 maps. Smoke first optional |
-| Not next | rewriting C5 prompts; C6; treating births as evolution; C3-R before C5-B closes |
+| C5 why (27B-A) | **20/20 alive**, **20/20 births**, food **56** — below C1/C3-A/C4-A. Max gen median **1**. Energy **280**. Entropy **1.90** |
+| C5 why (27B-B) | **12/20 alive** (40% extinct), food **23**, med pop **1**. STAY-dominant (entropy **0.77**). B collapses foraging once genome+births are on |
+| Next | **C6 code** (C5 + C4 memory), then a 27B smoke. Optional later: C3-R (LLM + births, no genome) — also needs code |
+| Not next | rewriting C5 prompts; treating B as survival training; C6 batch before smoke; C3-R before C6 if you want the matrix cell first |
 
 C2 fails because the phenotype cannot be C1 **and** random-init evolution rarely finds even the cardinal policy that *is* in the space. That is a result, not a reason to retune C2.
 
@@ -308,3 +309,21 @@ This is specified, not a bug. It means C2-failure is not yet “evolution cannot
 - **Interpretation:** C5-A persists but harvests worse than C1, C3-A, and C4-A. Births are reliable but shallow (median gen 1). Mid-run pop is high then thins. Phenotype is more mixed / STAY-heavy than C3-A’s EAST sweep. Do not treat as a pure evolution effect: longer prompt + births + mutation + extra LLM calls.
 - **Not claimed:** that the genome is followed; deep selection; that births help food; emergence; C2 rescue.
 - **Decision:** C5-A on 27B is closed. Next is **C5-B** (`c5b_qwen38_27b_20x200`, `llm_b_evolution`) on the same maps. Do not rewrite the C5 prompt. C6 waits.
+
+## 2026-09-21 — `c5b_qwen38_27b_smoke`
+
+- **Git:** `09b0f80107272c6dce2132a98746ee7777729309`
+- **Report:** [experiments/reports/c5b_qwen38_27b_smoke/](../experiments/reports/c5b_qwen38_27b_smoke/)
+- **Design:** seed 1, 50 ticks, C0 / C1 / C5-B (`qwen3.8:27b`, prompt B + genome). Same map as C5-A smoke.
+- **Headline:** 556 calls, 0 invalid. Food C1 25 / C5-B **14** (C5-A smoke 23). Pop 12 (2 births). **STAY ~83%**, entropy 1.00.
+- **Interpretation:** pipeline works; B already pulls STAY on short horizon. Need 20×200.
+
+## 2026-09-21 / 2026-09-22 — `c5b_qwen38_27b_20x200`
+
+- **Git:** `09b0f80107272c6dce2132a98746ee7777729309`
+- **Report:** [experiments/reports/c5b_qwen38_27b_20x200/](../experiments/reports/c5b_qwen38_27b_20x200/)
+- **Design:** seeds 1–20, 200 ticks, C0 / C1 / C5-B (`qwen3.8:27b`, prompt B + genome + C2 births). Same maps as C5-A. Batch paused after seed 15; resumed for the rest.
+- **Headline:** **12/20 alive** (8 extinct, mean TTE 146.5). Mean food **22.6** (C1 83.2, C5-A 56.2, C4-B 34.5). Paired food vs C1: Δ **−60.6**, CI [−71.1, −50.0], **0/20 higher**. Survival Δ −0.40. Med pop **1**, energy **97**, entropy **0.77**. Births 70% any. Invalid 0.
+- **Interpretation:** C5-B is the first 27B main-matrix condition that fails 20/20 persistence. Remain-alive plus genome/births collapses foraging into STAY; births do not rescue. Stronger ablation than C4-B (which stayed alive). Seed 5 (pop 11, food 75) is an outlier.
+- **Not claimed:** that B teaches survival; deep selection; emergence; that pause/resume biased numbers (completed seeds have full metrics).
+- **Decision:** C5 A/B on 27B is closed. Next is **C6 code** (genome + births + memory), then a 27B smoke — not a prompt rewrite. Optional later: C3-R to separate births from genome-in-prompt.

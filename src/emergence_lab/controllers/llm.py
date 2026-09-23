@@ -1,4 +1,4 @@
-"""C3–C5: LLM as a decision function. Prompts come from config, not this class."""
+"""C3–C6: LLM as a decision function. Prompts come from config, not this class."""
 
 from __future__ import annotations
 

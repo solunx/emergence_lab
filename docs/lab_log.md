@@ -6,22 +6,23 @@ A visually interesting GIF is not evidence of emergence.
 
 ---
 
-## Status (2026-09-22)
+## Status (2026-09-23)
 
 | Item | Value |
 |---|---|
 | Frozen economy | **m1-v2**: food `+30`, `regen_delay=15` |
 | Do not retune | food, regen, threshold, C2 mutation, C2 genome init, **C2 feature set** |
-| Completed | M1 + C2 oracle + C3-A/B 7B + C3-A/B 27B + C4-A/B 27B + **C5-A/B `qwen3.8:27b`** (20×200) |
+| Completed | M1 + C2 oracle + C3-A/B 7B + C3-A/B 27B + C4-A/B 27B + C5-A/B 27B + **C6 code** |
 | C2 why | (1) 9-bit ceiling vs C1; (2) bootstrap; (3) even oracle_r is weak vs C1-R |
 | C3 why (7B) | A and B are **STAY**: 0/20 alive, food 1.6 / 1.3 vs C0 7.2 vs C1 83 |
 | C3 why (27B) | A and B both **20/20 alive**, food **86 / 82** (ties with C1 83). EAST+N/S, not C1 (entropy ~0.99 vs 2.3) |
 | C4 why (27B-A) | **20/20 alive**, food **70** — below C1. Writes **1.3%** of decisions |
-| C4 why (27B-B) | **20/20 alive**, food **35** — far below C1 (Δ −48.6, 0/20). Writes **20%**. Thin pop (9 seeds end at 1). B is a strong ablation only once memory is on |
-| C5 why (27B-A) | **20/20 alive**, **20/20 births**, food **56** — below C1/C3-A/C4-A. Max gen median **1**. Energy **280**. Entropy **1.90** |
-| C5 why (27B-B) | **12/20 alive** (40% extinct), food **23**, med pop **1**. STAY-dominant (entropy **0.77**). B collapses foraging once genome+births are on |
-| Next | **C6 code** (C5 + C4 memory), then a 27B smoke. Optional later: C3-R (LLM + births, no genome) — also needs code |
-| Not next | rewriting C5 prompts; treating B as survival training; C6 batch before smoke; C3-R before C6 if you want the matrix cell first |
+| C4 why (27B-B) | **20/20 alive**, food **35** — far below C1 (Δ −48.6, 0/20). Writes **20%**. Thin pop (9 seeds end at 1) |
+| C5 why (27B-A) | **20/20 alive**, **20/20 births**, food **56**. Max gen median **1**. Energy **280** |
+| C5 why (27B-B) | **12/20 alive** (40% extinct), food **23**, med pop **1**. STAY-dominant |
+| Next | **C6 27B smoke** (`c6a_qwen38_27b_smoke`), then 20×200. Memory is **not** inherited |
+| Planned (named, not next) | **C2-diag** (diagonal features; new experiment version). Later: C3-R; LLM-as-metaleerder; social interaction (new world) |
+| Not next | rewriting C5/C6 prompts; editing v0.1 C2 features in place; treating memory inheritance as C6 |
 
 C2 fails because the phenotype cannot be C1 **and** random-init evolution rarely finds even the cardinal policy that *is* in the space. That is a result, not a reason to retune C2.
 
@@ -327,3 +328,27 @@ This is specified, not a bug. It means C2-failure is not yet “evolution cannot
 - **Interpretation:** C5-B is the first 27B main-matrix condition that fails 20/20 persistence. Remain-alive plus genome/births collapses foraging into STAY; births do not rescue. Stronger ablation than C4-B (which stayed alive). Seed 5 (pop 11, food 75) is an outlier.
 - **Not claimed:** that B teaches survival; deep selection; emergence; that pause/resume biased numbers (completed seeds have full metrics).
 - **Decision:** C5 A/B on 27B is closed. Next is **C6 code** (genome + births + memory), then a 27B smoke — not a prompt rewrite. Optional later: C3-R to separate births from genome-in-prompt.
+
+## 2026-09-23 — C6 implemented (no batch yet)
+
+- **What:** `llm_evolution_memory` / `llm_a_evolution_memory` (C6-A) and `llm_b_evolution_memory` (C6-B). C5 genome-in-prompt + C2 births **plus** C4 `MEMORY:` writes. Controller version `m3-c6-v1`. Config: `experiments/configs/c6_ollama.yaml` (`num_predict` 128).
+- **Critical:** memory is **not** inherited. Child starts with `memory=[]`; only the mutated genome passes on. Do not read C6 as “parent memories to offspring.”
+- **Confound:** C6 vs C3/C4/C5 mixes longer prompt, births, mutation, optional memory lines, and population dynamics.
+- **Decision:** 27B smoke first (`c6a_qwen38_27b_smoke`). Keep GPU exclusive. No 20×200 until smoke exists.
+
+## 2026-09-23 — Planned named experiments (not next)
+
+Classified so they are not silent patches of v0.1:
+
+1. **C2-diag** — new experiment version / diagnostic ID (not matrix C2). Same frozen m1-v2; expand linear features to include diagonals (± distance). Same mutation/init. Compare to v0.1 C2 and C1-R on the same seeds. **Do not edit the v0.1 9-feature C2 in place.** After C6 is measured, this is a strong candidate for the next non-LLM cell.
+2. **C3-R / C4-R** — LLM (+memory) + births, no genome. Ablation to separate births from genome-in-prompt. Needs named controllers (not built).
+3. **LLM-as-metaleerder** — LLM writes a reward/policy infrequently; agents act without per-tick LLM. Post-matrix / near C7. Different causal claim than C3–C6; needs its own spec and safety bounds on code execution.
+4. **Social interaction** — steal / cooperative harvest / combat / communication. **New world version**, not m1-v2. Changes the research question from controller-swap to agent–agent ecology.
+
+Ideas 3–4 are scientifically fine **as future pre-registered experiments**. They are out of v0.1 scope (spec §24). Not a rigor problem if they get their own `experiment_id` / world version and are not sold as “C6 fixed.”
+## 2026-09-23 — `c6a_qwen38_27b_smoke`
+
+- **Git:** `c1c0c1121b9dff411714ecb197273f31b3da5050`
+- **Report:** [experiments/reports/c6a_qwen38_27b_smoke/](experiments/reports/c6a_qwen38_27b_smoke/)
+- **Numbers:** generated by `summarize` (see `aggregate.md`)
+- **Interpretation:** pending (edit this entry and `experiments/reports/c6a_qwen38_27b_smoke/NOTES.md`)

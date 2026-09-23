@@ -25,6 +25,9 @@ CONTROLLER_REPRODUCTION = {
     "llm_evolution": True,
     "llm_a_evolution": True,
     "llm_b_evolution": True,
+    "llm_evolution_memory": True,
+    "llm_a_evolution_memory": True,
+    "llm_b_evolution_memory": True,
     "always_stay": False,
     "always_north": False,
 }
@@ -46,6 +49,9 @@ CONTROLLER_GENOME = {
     "llm_evolution": True,
     "llm_a_evolution": True,
     "llm_b_evolution": True,
+    "llm_evolution_memory": True,
+    "llm_a_evolution_memory": True,
+    "llm_b_evolution_memory": True,
     "always_stay": False,
     "always_north": False,
 }
@@ -67,6 +73,9 @@ CONTROLLER_MEMORY = {
     "llm_evolution": False,
     "llm_a_evolution": False,
     "llm_b_evolution": False,
+    "llm_evolution_memory": True,
+    "llm_a_evolution_memory": True,
+    "llm_b_evolution_memory": True,
     "always_stay": False,
     "always_north": False,
 }
@@ -75,6 +84,7 @@ CONTROLLER_MEMORY = {
 # without a genome (C0-R / C1-R ablations). llm / llm_a = prompt A; llm_b = prompt B.
 # llm_memory / llm_a_memory = C4 prompt A; llm_b_memory = C4 prompt B.
 # llm_evolution / llm_a_evolution = C5 prompt A; llm_b_evolution = C5 prompt B.
+# llm_evolution_memory / llm_a_evolution_memory = C6 prompt A; llm_b_evolution_memory = C6 B.
 DECISION_CONTROLLER = {
     "random": "random",
     "random_r": "random",
@@ -92,6 +102,9 @@ DECISION_CONTROLLER = {
     "llm_evolution": "llm",
     "llm_a_evolution": "llm",
     "llm_b_evolution": "llm",
+    "llm_evolution_memory": "llm",
+    "llm_a_evolution_memory": "llm",
+    "llm_b_evolution_memory": "llm",
     "always_stay": "always_stay",
     "always_north": "always_north",
 }
@@ -106,6 +119,9 @@ CONTROLLER_PROMPT = {
     "llm_evolution": "llm_a_evolution",
     "llm_a_evolution": "llm_a_evolution",
     "llm_b_evolution": "llm_b_evolution",
+    "llm_evolution_memory": "llm_a_evolution_memory",
+    "llm_a_evolution_memory": "llm_a_evolution_memory",
+    "llm_b_evolution_memory": "llm_b_evolution_memory",
 }
 
 C3_PROMPT_TO_MEMORY = {
@@ -120,6 +136,19 @@ C3_PROMPT_TO_EVOLUTION = {
     "llm_b": "llm_b_evolution",
 }
 
+# When genome + memory are both on, coerce C3/C4/C5 prompt ids to C6.
+PROMPT_TO_EVOLUTION_MEMORY = {
+    "llm_a": "llm_a_evolution_memory",
+    "llm": "llm_a_evolution_memory",
+    "llm_b": "llm_b_evolution_memory",
+    "llm_a_memory": "llm_a_evolution_memory",
+    "llm_memory": "llm_a_evolution_memory",
+    "llm_b_memory": "llm_b_evolution_memory",
+    "llm_a_evolution": "llm_a_evolution_memory",
+    "llm_evolution": "llm_a_evolution_memory",
+    "llm_b_evolution": "llm_b_evolution_memory",
+}
+
 NAMED_PROMPT_CONTROLLERS = frozenset(
     {
         "llm_a",
@@ -128,6 +157,8 @@ NAMED_PROMPT_CONTROLLERS = frozenset(
         "llm_b_memory",
         "llm_a_evolution",
         "llm_b_evolution",
+        "llm_a_evolution_memory",
+        "llm_b_evolution_memory",
     }
 )
 
@@ -185,7 +216,10 @@ class SimConfig:
             self.llm_prompt_id = CONTROLLER_PROMPT[self.controller]
         elif self.llm_prompt_id is None:
             self.llm_prompt_id = CONTROLLER_PROMPT.get(self.controller, "llm_a")
-        if self.memory_enabled and self.llm_prompt_id in C3_PROMPT_TO_MEMORY:
+        if self.memory_enabled and self.genome_enabled:
+            if self.llm_prompt_id in PROMPT_TO_EVOLUTION_MEMORY:
+                self.llm_prompt_id = PROMPT_TO_EVOLUTION_MEMORY[self.llm_prompt_id]
+        elif self.memory_enabled and self.llm_prompt_id in C3_PROMPT_TO_MEMORY:
             self.llm_prompt_id = C3_PROMPT_TO_MEMORY[self.llm_prompt_id]
         elif (
             self.genome_enabled

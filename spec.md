@@ -782,7 +782,19 @@ Daarna: Observation-blok (zelfde serialisatie als C3) en `Genome:` (5 regels wei
 
 ### 9.7 C6 — LLM + Evolution + Memory
 
-C5 + C4. Geen communicatie.
+C5 + C4. Controller-namen: `llm_evolution_memory` / `llm_a_evolution_memory` (prompt A + genome + memory), `llm_b_evolution_memory` (prompt B). Reproductie/mutatie zoals C2. Memory zoals C4 (cap 20, FIFO, write T+1).
+
+**Memory wordt nooit geërfd.** Kind start met `memory=[]`. Alleen het genome (gemuteerd) gaat over. C6 is dus geen “ouder-herinneringen doorgeven”; het is genome-in-prompt + births + individuele memory-writes in één conditie.
+
+Het genome **dwingt geen actie af**. Interpreteer C6−C5 / C6−C4 / C6−C3 niet als één factor: langere prompt, births, mutatie, optionele `MEMORY:`-regels, en population dynamics.
+
+**C6-A** (default):
+
+> Choose exactly one valid action based on the observation and your memory. You also have an inherited genome of 45 weights. The genome does not require any action. Reply with exactly one of: NORTH, SOUTH, EAST, WEST, STAY on the first line. Optionally add a second line MEMORY: <one short note to keep>. Omit MEMORY to write nothing.
+
+**C6-B** (survival ablation): zelfde plus “remain alive as long as possible.”
+
+Daarna: Observation, `Memory:`, `Genome:` (zelfde serialisatie als C4/C5). Default `num_predict` 128 (zoals C4).
 
 ### 9.8 C7 — Online learning (documentatie, niet bouwen in v0.1)
 
@@ -994,12 +1006,16 @@ Ablations na de eerste resultaten, onder andere:
 C2 vs C0-R vs C0     # genetic evolution vs population dynamics vs baseline
 C2 vs C2-oracle      # random-init evolution vs fixed cardinal phenotype (same 9 features)
 C2-diag / denser features   # later, nieuwe experimentversie; niet v0.1-C2 herschrijven
+                            # ID: C2-diag (named diagnostic / new experiment version)
+                            # Same frozen m1-v2 world; expand C2 features (diagonals ± distance)
+                            # Keep random-init + mutation; compare to v0.1 C2 and C1-R on same seeds
 C6
  ├── zonder memory   (= C5)
  ├── zonder evolution (= C4)
  └── zonder beide    (= C3)
 
 C3 prompt A  vs  C3 prompt B
+C3-R / C4-R                 # LLM(+memory) + births, no genome — needs named controllers
 ```
 
 ---
@@ -1042,7 +1058,7 @@ llm:
   model: null          # configureerbaar, nooit hardcoded
   endpoint: null
   temperature: 0.0
-  prompt_id: llm_a     # llm_a | llm_b | llm_a_memory | llm_b_memory | llm_a_evolution | llm_b_evolution
+  prompt_id: llm_a     # llm_a | llm_b | llm_a_memory | llm_b_memory | llm_a_evolution | llm_b_evolution | llm_a_evolution_memory | llm_b_evolution_memory
   prompt_version: 1
 
 experiment:
@@ -1465,6 +1481,7 @@ Sanity: AlwaysStay op een patch zonder regen-onder-organisme sterft volgens het 
 - C3: parse NORTH/SOUTH/EAST/WEST/STAY; garbage → STAY + `INVALID_ACTION`; raw output in `LLM_CALL`
 - C3 tests gebruiken een fake client (geen netwerk)
 - C5: genome in de prompt; LLM kiest de actie; reproductie/mutatie zoals C2; genome dwingt geen actie af
+- C6: C5 + C4 memory; memory niet geërfd; genome dwingt geen actie af
 
 ### Reproducibility
 
@@ -1500,6 +1517,17 @@ Niet implementeren:
 - scalar “emergence score”
 
 Die kunnen later afzonderlijke experimenten of ablations worden.
+
+**Gepland na de v0.1-matrix (niet bouwen tot C6 gemeten is):**
+
+| ID / naam | Wat | Classificatie | Why not silent in v0.1 |
+|---|---|---|---|
+| **C2-diag** | Zelfde lineaire C2-policy, maar features inclusief diagonalen (en eventueel afstand). Zelfde mutatie/init; frozen m1-v2; same seeds als C2 | Named diagnostic / **nieuwe experimentversie**, niet matrix-ID C2 | v0.1-C2 feature set is frozen; verruimen = confound wissen |
+| **C3-R / C4-R** | LLM (+memory) + births, **geen** genome | Ablation (zoals C0-R/C1-R) | Scheidt births van genome-in-prompt |
+| **LLM-as-metaleerder** | LLM schrijft periodiek een reward/policy (code of weights); agents voeren die uit zonder per-tick LLM | Post-v0.1 / Milestone 4-achtig (raakt C7 / “prompt evolution”) | Geen per-tick decision adapter meer; andere causal claim; code-exec risk |
+| **Sociale interactie** | Bestelen, coöperatief oogsten, combat, communicatie | Nieuwe wereldversie (niet m1-v2) | Agent–wereld → agent–agent verandert de research question; niet “swap controller only” |
+
+Ideeën 3–4 zijn wetenschappelijk interessant **als aparte, vooraf gespecificeerde experimenten** met eigen `world_version` / `experiment_id`. Ze zijn geen “fix” van C0–C6. Rigor: pre-register metrics, geen stille world-retune, en claim geen emergentie uit één seed of één GIF.
 
 ---
 
@@ -1552,8 +1580,8 @@ Doel:
 
 ### Milestone 3
 
-- [x] C5 genome-in-prompt + C2-reproductie (C6 volgt)
-- [ ] C6
+- [x] C5 genome-in-prompt + C2-reproductie
+- [x] C6 genome + memory + C2-reproductie (memory niet geërfd)
 - [ ] automatische vergelijking tussen controllers op clones + seeds
 
 ---

@@ -86,7 +86,9 @@ def run_simulation(
     write_snapshot(snapshots_dir / f"tick_{config.ticks:06d}.json", engine.state)
 
     llm = config.controller in LLM_CONTROLLERS
-    if llm and config.genome_enabled:
+    if llm and config.genome_enabled and config.memory_enabled:
+        controller_version = "m3-c6-v1"
+    elif llm and config.genome_enabled:
         controller_version = "m3-c5-v1"
     elif llm and config.memory_enabled:
         controller_version = "m2-c4-v1"

@@ -56,6 +56,30 @@ Genome:
 {genome}
 """
 
+LLM_A_EVOLUTION_MEMORY = """Choose exactly one valid action based on the observation and your memory. You also have an inherited genome of 45 weights. The genome does not require any action. Reply with exactly one of: NORTH, SOUTH, EAST, WEST, STAY on the first line. Optionally add a second line MEMORY: <one short note to keep>. Omit MEMORY to write nothing.
+
+Observation:
+{observation}
+
+Memory:
+{memory}
+
+Genome:
+{genome}
+"""
+
+LLM_B_EVOLUTION_MEMORY = """Your objective is to remain alive as long as possible. Choose exactly one valid action based on the observation and your memory. You also have an inherited genome of 45 weights. The genome does not require any action. Reply with exactly one of: NORTH, SOUTH, EAST, WEST, STAY on the first line. Optionally add a second line MEMORY: <one short note to keep>. Omit MEMORY to write nothing.
+
+Observation:
+{observation}
+
+Memory:
+{memory}
+
+Genome:
+{genome}
+"""
+
 PROMPTS = {
     "llm_a": LLM_A,
     "llm": LLM_A,
@@ -66,11 +90,30 @@ PROMPTS = {
     "llm_a_evolution": LLM_A_EVOLUTION,
     "llm_evolution": LLM_A_EVOLUTION,
     "llm_b_evolution": LLM_B_EVOLUTION,
+    "llm_a_evolution_memory": LLM_A_EVOLUTION_MEMORY,
+    "llm_evolution_memory": LLM_A_EVOLUTION_MEMORY,
+    "llm_b_evolution_memory": LLM_B_EVOLUTION_MEMORY,
 }
 
-MEMORY_PROMPT_IDS = frozenset({"llm_a_memory", "llm_memory", "llm_b_memory"})
+MEMORY_PROMPT_IDS = frozenset(
+    {
+        "llm_a_memory",
+        "llm_memory",
+        "llm_b_memory",
+        "llm_a_evolution_memory",
+        "llm_evolution_memory",
+        "llm_b_evolution_memory",
+    }
+)
 EVOLUTION_PROMPT_IDS = frozenset(
-    {"llm_a_evolution", "llm_evolution", "llm_b_evolution"}
+    {
+        "llm_a_evolution",
+        "llm_evolution",
+        "llm_b_evolution",
+        "llm_a_evolution_memory",
+        "llm_evolution_memory",
+        "llm_b_evolution_memory",
+    }
 )
 
 

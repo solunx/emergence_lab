@@ -40,6 +40,8 @@ CONTROLLER_ORDER = (
     "llm_a_evolution",
     "llm_b_evolution",
     "llm_evolution_memory",
+    "llm_a_evolution_memory",
+    "llm_b_evolution_memory",
 )
 
 NUMERIC_FIELDS = (

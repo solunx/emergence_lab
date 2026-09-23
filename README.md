@@ -4,7 +4,7 @@ Minimal artificial-life laboratory: **one world, one body, one observation, one 
 
 This is a **mechanistic artificial-life model, not a biological model**. Its scientific value is in the consequences of the specified computational rules, not in biological realism.
 
-Normative rules live in [`spec.md`](spec.md). Milestone 1 is implemented (world, C0–C2, logging, replay, GIFs, analytics). Milestone 2 **C3** (LLM) and **C4** (LLM + per-organism `list[str]` memory) are implemented. Milestone 3 **C5** (LLM + C2 genome as prompt context + C2-like births) is implemented and measured on `qwen3.8:27b` (A/B). Model name, endpoint, temperature, and prompt id are **config/CLI only — never hardcoded**. C6 (C5 + memory) is not built yet.
+Normative rules live in [`spec.md`](spec.md). Milestone 1 is implemented (world, C0–C2, logging, replay, GIFs, analytics). Milestone 2 **C3** (LLM) and **C4** (LLM + per-organism `list[str]` memory) are implemented. Milestone 3 **C5** (LLM + genome + births) is measured on `qwen3.8:27b` (A/B). **C6** (C5 + memory) is implemented; no C6 batch yet. Model name, endpoint, temperature, and prompt id are **config/CLI only — never hardcoded**.
 
 ## Research question
 
@@ -14,7 +14,7 @@ The experimental intervention is the controller configuration. Other world and o
 
 Controllers share the same **raw** 5×5 observation. They do not share the same **effective representation**. C1 reasons over full local resource geometry (including diagonals) with a built-in food prior. C2 is a linear policy over 9 features: four cardinal resource bits (N1 and N2 are one bit), four organism bits, and a bias. Diagonal-only food is invisible to C2 (same features as an empty patch). That bottleneck is part of the C2 condition. Do not expand C2 features because C2 failed; a denser C2 is a later named experiment.
 
-Reproduction is **not** a universal world rule in the main matrix. C2 and C5 may reproduce; C0, C1, C3, and C4 may not. Do not read C2 vs C0 (or C5 vs C3) as “only the decision function changed.” Those comparisons mix genetic evolution with population dynamics. Ablations: **C0-R** (`random_r`) and **C1-R** (`reactive_r`) — same decision class, reproduction on, no genome. Diagnostic (not in the main matrix): **C2-oracle** (`evolutionary_oracle` / `evolutionary_oracle_r`) — same 9 features, fixed cardinal genome, no mutation.
+Reproduction is **not** a universal world rule in the main matrix. C2, C5, and C6 may reproduce; C0, C1, C3, and C4 may not. Do not read C2 vs C0 (or C5 vs C3) as “only the decision function changed.” Those comparisons mix genetic evolution with population dynamics. Ablations: **C0-R** (`random_r`) and **C1-R** (`reactive_r`) — same decision class, reproduction on, no genome. Diagnostic (not in the main matrix): **C2-oracle** (`evolutionary_oracle` / `evolutionary_oracle_r`) — same 9 features, fixed cardinal genome, no mutation. A later **C2-diag** (diagonal features) is a new experiment version, not an edit of v0.1 C2.
 
 ## Experimental matrix (v0.1)
 
@@ -31,7 +31,7 @@ Reproduction is **not** a universal world rule in the main matrix. C2 and C5 may
 | C5 | LLM + Evolution | Yes | No | Yes | 3 |
 | C6 | LLM + Evolution + Memory | Yes | Yes | Yes | 3 |
 
-C1 has a food-seeking objective. **C3-A does not** (prompt: pick NORTH/SOUTH/EAST/WEST/STAY from the 5×5 only). They share information, not the same inductive bias. C3-B / C4-B / C5-B are survival-instructed ablations (`llm_b` / `llm_b_memory` / `llm_b_evolution`), not new matrix IDs. C4 is C3 plus optional `MEMORY:` writes (visible T+1, cap 20, max 200 chars). C5 is C3 plus the C2 genome as compact prompt context and C2 reproduction/mutation; the genome **does not force an action**. Both also lengthen the prompt; do not read C4−C3 as a pure memory effect or C5−C3 as a pure evolution effect. C2-oracle is not a C1 clone: it cannot see diagonal food.
+C1 has a food-seeking objective. **C3-A does not**. C3-B / C4-B / C5-B / C6-B are survival-instructed ablations, not new matrix IDs. C4 is C3 plus optional `MEMORY:` writes. C5 is C3 plus genome-in-prompt and C2 births. **C6 is C5 + C4 memory**; memory is **never inherited** (only the mutated genome passes to children). Do not read C4−C3, C5−C3, or C6−C5 as single-factor contrasts. C2-oracle cannot see diagonal food; expanding C2 features is **C2-diag**, a later named experiment.
 
 Local model **variants are in-scope**. Each Ollama tag is a different `experiment_id` (e.g. `c3a_qwen25_7b` vs `c3a_qwen38_27b`). Do not silently swap models inside one batch.
 
@@ -145,7 +145,7 @@ python -m emergence_lab batch \
   --controllers reactive_r,evolutionary_oracle_r,evolutionary
 ```
 
-Tracked reports: [`docs/lab_log.md`](docs/lab_log.md) and [`experiments/reports/`](experiments/reports/). Economy **m1-v2** is frozen (food +30, regen 15). M1 C0/C1/C2 + oracle diagnostics are done. C3 is **model-dependent**: `qwen2.5:7b` STAY (0/20 alive, A and B); `qwen3.8:27b` harvests like C1 (A/B food 86 / 82 vs C1 83). C4-A on 27B persists but food **70** (below C1) with rare writes (1.3%). C4-B persists with food **35** (0/20 vs C1) and writes **20%** of decisions. C5-A on 27B persists with food **56**, **20/20 births**, shallow lineages. C5-B: **12/20 alive**, food **23**, STAY-dominant — first 27B matrix cell that fails 20/20 persistence. Next is **C6 code**, not a prompt rewrite.
+Tracked reports: [`docs/lab_log.md`](docs/lab_log.md) and [`experiments/reports/`](experiments/reports/). Economy **m1-v2** is frozen (food +30, regen 15). C5-A food **56**; C5-B **12/20 alive**, food **23**. C6 code is in; next is a 27B smoke, not a prompt rewrite. Later named (not silent): **C2-diag**, C3-R, LLM-as-metaleerder, social world.
 
 Later, if a candidate pattern appears, extra Python tests (permutation, survival curves, genome/lineage on hits) can argue it is not a controller bias. Those are **not** in the default summarize path. Descriptive stats stay automatic; causal claims stay manual.
 
@@ -288,16 +288,38 @@ python -m emergence_lab batch \
   --prompt-id llm_b_evolution
 ```
 
-C5 A/B on 27B is closed. **C6 is not built yet** (needs genome + births + C4 memory in one controller). Optional later ablation **C3-R** (LLM + births, no genome) also needs code.
+C5 A/B on 27B is closed.
+
+## C6 — LLM + evolution + memory
+
+C6 is C5 plus C4 memory: genome-in-prompt, C2 births/mutation, and optional `MEMORY:` writes (visible T+1, cap 20, FIFO). Controllers: `llm_evolution_memory` / `llm_a_evolution_memory` (A) and `llm_b_evolution_memory` (B). Default `num_predict` 128.
+
+**Memory is never inherited.** Children start with an empty list; only the mutated genome is passed on. Do not expect “parent notes → child policy.”
+
+Do not read C6−C5 as a pure memory effect (longer prompt + write option) or C6−C3 as pure evolution+memory.
+
+```bash
+# Requires a running Ollama daemon. Keep the GPU exclusive.
+python -m emergence_lab batch \
+  --experiment-id c6a_qwen38_27b_smoke \
+  --seeds 1 \
+  --ticks 50 \
+  --controllers random,reactive,llm_evolution_memory \
+  --llm-model qwen3.8:27b \
+  --prompt-id llm_a_evolution_memory \
+  --llm-num-predict 128
+```
+
+No 20×200 until that smoke exists. **C2-diag** (diagonal features) is classified as a later named experiment — do not edit v0.1 C2 features in place.
 
 ## Project layout
 
 ```text
 src/emergence_lab/          simulator, analytics, visualization, llm adapter
 docs/lab_log.md             chronological interpretation (tracked)
-experiments/configs/        YAML configs (`c3_ollama.yaml`, `c4_ollama.yaml`, `c5_ollama.yaml`)
+experiments/configs/        YAML configs (`c3_ollama.yaml` … `c6_ollama.yaml`)
 experiments/results/        raw runs (gitignored)
 experiments/reports/        aggregate.md + CSVs + NOTES (tracked)
-tests/                      world, invariants, verification controllers, replay, C3–C5 parse
+tests/                      world, invariants, verification controllers, replay, C3–C6 parse
 spec.md                     implementation specification
 ```

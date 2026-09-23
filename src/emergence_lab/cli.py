@@ -240,8 +240,10 @@ def _add_llm_flags(parser: argparse.ArgumentParser) -> None:
             "llm_b_memory",
             "llm_a_evolution",
             "llm_b_evolution",
+            "llm_a_evolution_memory",
+            "llm_b_evolution_memory",
         ],
-        help="C3: llm_a / llm_b. C4: *_memory. C5: *_evolution. Named controllers force their prompt.",
+        help="C3: llm_a/b. C4: *_memory. C5: *_evolution. C6: *_evolution_memory. Named controllers force their prompt.",
     )
     parser.add_argument("--llm-temperature", type=float, default=None)
     parser.add_argument("--llm-timeout", type=float, default=None, help="Seconds per LLM call")

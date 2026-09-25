@@ -1,8 +1,11 @@
 from emergence_lab.controllers.base import Controller, Decision
 from emergence_lab.controllers.evolutionary import (
     EvolutionaryController,
+    EvolutionaryDiagController,
+    EvolutionaryDiagOracleController,
     EvolutionaryOracleController,
     extract_features,
+    extract_features_diag,
     mutate_genome,
 )
 from emergence_lab.controllers.llm import LlmController
@@ -16,10 +19,13 @@ __all__ = [
     "Controller",
     "Decision",
     "EvolutionaryController",
+    "EvolutionaryDiagController",
+    "EvolutionaryDiagOracleController",
     "EvolutionaryOracleController",
     "LlmController",
     "RandomController",
     "ReactiveController",
     "extract_features",
+    "extract_features_diag",
     "mutate_genome",
 ]

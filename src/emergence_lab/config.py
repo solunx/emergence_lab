@@ -16,6 +16,9 @@ CONTROLLER_REPRODUCTION = {
     "evolutionary": True,
     "evolutionary_oracle": False,
     "evolutionary_oracle_r": True,
+    "evolutionary_diag": True,
+    "evolutionary_diag_oracle": False,
+    "evolutionary_diag_oracle_r": True,
     "llm": False,
     "llm_a": False,
     "llm_b": False,
@@ -40,6 +43,9 @@ CONTROLLER_GENOME = {
     "evolutionary": True,
     "evolutionary_oracle": False,
     "evolutionary_oracle_r": False,
+    "evolutionary_diag": True,
+    "evolutionary_diag_oracle": False,
+    "evolutionary_diag_oracle_r": False,
     "llm": False,
     "llm_a": False,
     "llm_b": False,
@@ -64,6 +70,9 @@ CONTROLLER_MEMORY = {
     "evolutionary": False,
     "evolutionary_oracle": False,
     "evolutionary_oracle_r": False,
+    "evolutionary_diag": False,
+    "evolutionary_diag_oracle": False,
+    "evolutionary_diag_oracle_r": False,
     "llm": False,
     "llm_a": False,
     "llm_b": False,
@@ -85,6 +94,7 @@ CONTROLLER_MEMORY = {
 # llm_memory / llm_a_memory = C4 prompt A; llm_b_memory = C4 prompt B.
 # llm_evolution / llm_a_evolution = C5 prompt A; llm_b_evolution = C5 prompt B.
 # llm_evolution_memory / llm_a_evolution_memory = C6 prompt A; llm_b_evolution_memory = C6 B.
+# evolutionary_diag* = C2-diag (17 features); not an edit of v0.1 C2.
 DECISION_CONTROLLER = {
     "random": "random",
     "random_r": "random",
@@ -93,6 +103,9 @@ DECISION_CONTROLLER = {
     "evolutionary": "evolutionary",
     "evolutionary_oracle": "evolutionary_oracle",
     "evolutionary_oracle_r": "evolutionary_oracle",
+    "evolutionary_diag": "evolutionary_diag",
+    "evolutionary_diag_oracle": "evolutionary_diag_oracle",
+    "evolutionary_diag_oracle_r": "evolutionary_diag_oracle",
     "llm": "llm",
     "llm_a": "llm",
     "llm_b": "llm",

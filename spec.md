@@ -869,6 +869,20 @@ Het oracle-genome is **geen** fitted kopie van C1 (diagonalen blijven onzichtbaa
 
 CLI: `python -m emergence_lab representability` (geen batch). Daarna same-world clones op frozen m1-v2, zelfde seeds 1–100.
 
+### 10.3 Named experiment: C2-diag (niet matrix-C2)
+
+Nieuwe experimentversie. **Niet** een stille edit van v0.1 C2.
+
+```text
+evolutionary_diag              17 features (cardinal + diag resource/organism + bias);
+                               85 weights; reproduction + mutatie zoals C2
+evolutionary_diag_oracle       zelfde 17 features; vast diag-oracle genome;
+                               geen mutatie, geen reproduction
+evolutionary_diag_oracle_r     zelfde decision class, reproduction aan, geen genome
+```
+
+Diag-oracle: resource op as → die move; resource op diagonaal → tie van de twee aangrenzende cardinal moves. Actieruimte blijft N/S/E/W/STAY (geen diagonale moves).
+
 ---
 
 ## 11. Seeds versus same-world clones

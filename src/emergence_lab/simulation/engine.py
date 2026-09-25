@@ -9,6 +9,8 @@ from emergence_lab.config import DECISION_CONTROLLER, NAMED_PROMPT_CONTROLLERS, 
 from emergence_lab.controllers.base import Controller, Decision
 from emergence_lab.controllers.evolutionary import (
     EvolutionaryController,
+    EvolutionaryDiagController,
+    EvolutionaryDiagOracleController,
     EvolutionaryOracleController,
     mutate_genome,
 )
@@ -34,6 +36,8 @@ def make_controller(
         "reactive": ReactiveController,
         "evolutionary": EvolutionaryController,
         "evolutionary_oracle": EvolutionaryOracleController,
+        "evolutionary_diag": EvolutionaryDiagController,
+        "evolutionary_diag_oracle": EvolutionaryDiagOracleController,
         "always_stay": AlwaysStayController,
         "always_north": AlwaysNorthController,
         "llm": LlmController,

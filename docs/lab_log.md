@@ -6,23 +6,23 @@ A visually interesting GIF is not evidence of emergence.
 
 ---
 
-## Status (2026-09-23)
+## Status (2026-09-25)
 
 | Item | Value |
 |---|---|
 | Frozen economy | **m1-v2**: food `+30`, `regen_delay=15` |
-| Do not retune | food, regen, threshold, C2 mutation, C2 genome init, **C2 feature set** |
-| Completed | M1 + C2 oracle + C3-A/B 7B + C3-A/B 27B + C4-A/B 27B + C5-A/B 27B + **C6 code** |
+| Do not retune | food, regen, threshold, C2 mutation, C2 genome init, **C2 feature set** (v0.1) |
+| Completed | M1 + C2 oracle + C3–C5 A/B 27B + **C6-A `qwen3.8:27b`** (20×200) + **C6 code** + **C2-diag code** |
 | C2 why | (1) 9-bit ceiling vs C1; (2) bootstrap; (3) even oracle_r is weak vs C1-R |
 | C3 why (7B) | A and B are **STAY**: 0/20 alive, food 1.6 / 1.3 vs C0 7.2 vs C1 83 |
-| C3 why (27B) | A and B both **20/20 alive**, food **86 / 82** (ties with C1 83). EAST+N/S, not C1 (entropy ~0.99 vs 2.3) |
-| C4 why (27B-A) | **20/20 alive**, food **70** — below C1. Writes **1.3%** of decisions |
-| C4 why (27B-B) | **20/20 alive**, food **35** — far below C1 (Δ −48.6, 0/20). Writes **20%**. Thin pop (9 seeds end at 1) |
-| C5 why (27B-A) | **20/20 alive**, **20/20 births**, food **56**. Max gen median **1**. Energy **280** |
-| C5 why (27B-B) | **12/20 alive** (40% extinct), food **23**, med pop **1**. STAY-dominant |
-| Next | **C6 27B smoke** (`c6a_qwen38_27b_smoke`), then 20×200. Memory is **not** inherited |
-| Planned (named, not next) | **C2-diag** (diagonal features; new experiment version). Later: C3-R; LLM-as-metaleerder; social interaction (new world) |
-| Not next | rewriting C5/C6 prompts; editing v0.1 C2 features in place; treating memory inheritance as C6 |
+| C3 why (27B) | A and B both **20/20 alive**, food **86 / 82** (ties with C1 83) |
+| C4 why (27B-A) | **20/20 alive**, food **70**. Writes **1.3%** |
+| C4 why (27B-B) | **20/20 alive**, food **35**. Writes **20%**. Thin pop |
+| C5 why (27B-A) | **20/20 alive**, food **56**, births 100%, max gen median 1 |
+| C5 why (27B-B) | **12/20 alive**, food **23**, STAY-dominant |
+| C6 why (27B-A) | **20/20 alive**, food **59** (≈ C5-A, below C4-A/C1). Writes **~49%**. Births 90%, max gen median 1. Memory did not lift harvest |
+| Next | **C6-B** 27B smoke then 20×200. Parallel non-LLM: **C2-diag** batch (`evolutionary_diag*`) |
+| Not next | rewriting C6 prompts; editing v0.1 C2 features in place; claiming memory inheritance |
 
 C2 fails because the phenotype cannot be C1 **and** random-init evolution rarely finds even the cardinal policy that *is* in the space. That is a result, not a reason to retune C2.
 
@@ -346,9 +346,36 @@ Classified so they are not silent patches of v0.1:
 4. **Social interaction** — steal / cooperative harvest / combat / communication. **New world version**, not m1-v2. Changes the research question from controller-swap to agent–agent ecology.
 
 Ideas 3–4 are scientifically fine **as future pre-registered experiments**. They are out of v0.1 scope (spec §24). Not a rigor problem if they get their own `experiment_id` / world version and are not sold as “C6 fixed.”
+
 ## 2026-09-23 — `c6a_qwen38_27b_smoke`
 
-- **Git:** `c1c0c1121b9dff411714ecb197273f31b3da5050`
-- **Report:** [experiments/reports/c6a_qwen38_27b_smoke/](experiments/reports/c6a_qwen38_27b_smoke/)
+- **Git:** `4cccfb643e983d92dcaa96fd2a7e662f456d1a9c`
+- **Report:** [experiments/reports/c6a_qwen38_27b_smoke/](../experiments/reports/c6a_qwen38_27b_smoke/)
+- **Design:** seed 1, 50 ticks, C0 / C1 / C6-A. Same map as prior 27B smokes.
+- **Headline:** 560 calls, 0 invalid, ~1.73 s/call, **177** writes. Food C1 25 / C6-A **25**. Pop 11 (2 births). EAST-heavy.
+- **Interpretation:** pipeline works; short-horizon food = C1 does not predict 200-tick results.
+
+## 2026-09-24 / 2026-09-25 — `c6a_qwen38_27b_20x200`
+
+- **Git:** `4cccfb643e983d92dcaa96fd2a7e662f456d1a9c`
+- **Report:** [experiments/reports/c6a_qwen38_27b_20x200/](../experiments/reports/c6a_qwen38_27b_20x200/)
+- **Design:** seeds 1–20, 200 ticks, C0 / C1 / C6-A. Same maps as C5-A. Interrupted after most seeds; seed 20 re-run from tick 0 on resume (`…T054945Z`). Seed 1 finished in the resumed window. Published metrics are complete clones.
+- **Headline:** **20/20 alive**, mean food **58.9** (C1 83.2, C5-A 56.2, C4-A 70.3). Paired food vs C1: Δ **−24.3**, CI [−34.1, −14.5]. Pop 3.25, energy **198**, births 90% any, max gen median 1. Writes mean **712** (~**49%** of calls) vs C4-A 1.3%. Invalid 0. Entropy 1.63.
+- **Interpretation:** C6-A persists. Adding memory to C5 does **not** raise harvest (≈ C5-A). Writes are frequent but not useful for food. Lineages stay shallow. Do not treat as pure memory or pure evolution.
+- **Not claimed:** memory inheritance; that writes help; emergence; that the interrupt biased published numbers.
+- **Decision:** C6-A closed. Next: **C6-B** on the same maps. Parallel: **C2-diag** shipped (`evolutionary_diag` / `evolutionary_diag_oracle` / `_r`; 17 features, 85 weights). Do not edit v0.1 C2.
+
+---
+
+## 2026-09-25 — C2-diag code (`m1-c2diag-v1`)
+
+- **What:** Named experiment version. Controllers `evolutionary_diag` (evolved 85-weight genome), `evolutionary_diag_oracle`, `evolutionary_diag_oracle_r`. Features: C2 cardinals + NE/SE/SW/NW resource and organism bits + bias (17). Diag-oracle: cardinal food → that move; diagonal food ties the two adjacent cardinals. v0.1 `evolutionary` (9/45) unchanged.
+- **Why:** Separate representation ceiling from bootstrap without silently rewriting C2.
+- **Not changed:** food, regen, mutation, genome init scale, C2 feature set.
+- **Decision:** Run `c2diag_oracle_100x1000` on seeds 1–100 (same as M1 C2). Can run CPU-side while GPU does C6-B.
+## 2026-09-25 — `c2diag_smoke`
+
+- **Git:** `4cccfb643e983d92dcaa96fd2a7e662f456d1a9c`
+- **Report:** [experiments/reports/c2diag_smoke/](experiments/reports/c2diag_smoke/)
 - **Numbers:** generated by `summarize` (see `aggregate.md`)
-- **Interpretation:** pending (edit this entry and `experiments/reports/c6a_qwen38_27b_smoke/NOTES.md`)
+- **Interpretation:** pending (edit this entry and `experiments/reports/c2diag_smoke/NOTES.md`)

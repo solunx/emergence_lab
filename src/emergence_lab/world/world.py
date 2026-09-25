@@ -11,10 +11,22 @@ from emergence_lab.world.resource import ResourceSite
 from emergence_lab.world.types import (
     ACTION_DELTA,
     ALL_ACTIONS,
+    DIAG_N_GENOME_WEIGHTS,
     N_GENOME_WEIGHTS,
     Action,
     CellKind,
 )
+
+
+def genome_weight_count(controller: str) -> int:
+    """v0.1 C2 / LLM evolution: 45 weights. C2-diag: 85. Oracles do not store genomes."""
+    if controller in (
+        "evolutionary_diag",
+        "evolutionary_diag_oracle",
+        "evolutionary_diag_oracle_r",
+    ):
+        return DIAG_N_GENOME_WEIGHTS
+    return N_GENOME_WEIGHTS
 
 
 def wrap(value: int, size: int) -> int:
@@ -119,10 +131,8 @@ class WorldState:
         return state
 
 
-def random_genome(rng) -> tuple[float, ...]:
-    return tuple(
-        rng.uniform(-0.1, 0.1) for _ in range(N_GENOME_WEIGHTS)
-    )
+def random_genome(rng, n_weights: int = N_GENOME_WEIGHTS) -> tuple[float, ...]:
+    return tuple(rng.uniform(-0.1, 0.1) for _ in range(n_weights))
 
 
 def generate_world(config: SimConfig, world_rng, evolution_rng) -> WorldState:
@@ -145,7 +155,10 @@ def generate_world(config: SimConfig, world_rng, evolution_rng) -> WorldState:
     ]
     organisms = []
     for idx, (x, y) in enumerate(organism_positions):
-        genome = random_genome(evolution_rng) if config.genome_enabled else None
+        n_weights = genome_weight_count(config.controller)
+        genome = (
+            random_genome(evolution_rng, n_weights) if config.genome_enabled else None
+        )
         organisms.append(
             Organism(
                 id=idx,
@@ -183,8 +196,13 @@ def clone_world_for_controller(
     """Clone tick-0 occupancy/resources, then attach controller-specific state."""
     cloned_config = SimConfig(**{**config.to_dict(), "controller": config.controller})
     organisms = []
+    n_weights = genome_weight_count(cloned_config.controller)
     for org in layout.organisms:
-        genome = random_genome(evolution_rng) if cloned_config.genome_enabled else None
+        genome = (
+            random_genome(evolution_rng, n_weights)
+            if cloned_config.genome_enabled
+            else None
+        )
         organisms.append(
             Organism(
                 id=org.id,

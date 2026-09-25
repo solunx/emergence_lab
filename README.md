@@ -145,7 +145,7 @@ python -m emergence_lab batch \
   --controllers reactive_r,evolutionary_oracle_r,evolutionary
 ```
 
-Tracked reports: [`docs/lab_log.md`](docs/lab_log.md) and [`experiments/reports/`](experiments/reports/). Economy **m1-v2** is frozen (food +30, regen 15). C5-A food **56**; C5-B **12/20 alive**, food **23**. C6 code is in; next is a 27B smoke, not a prompt rewrite. Later named (not silent): **C2-diag**, C3-R, LLM-as-metaleerder, social world.
+Tracked reports: [`docs/lab_log.md`](docs/lab_log.md) and [`experiments/reports/`](experiments/reports/). Economy **m1-v2** is frozen. C5-A food **56**; C5-B **12/20 alive**, food **23**. C6-A: **20/20 alive**, food **59** (≈ C5-A), memory writes **~49%**. Next: C6-B; parallel **C2-diag** (`evolutionary_diag*`).
 
 Later, if a candidate pattern appears, extra Python tests (permutation, survival curves, genome/lineage on hits) can argue it is not a controller bias. Those are **not** in the default summarize path. Descriptive stats stay automatic; causal claims stay manual.
 
@@ -310,7 +310,47 @@ python -m emergence_lab batch \
   --llm-num-predict 128
 ```
 
-No 20×200 until that smoke exists. **C2-diag** (diagonal features) is classified as a later named experiment — do not edit v0.1 C2 features in place.
+No 20×200 until that smoke exists.
+
+On `qwen3.8:27b` prompt A, C6 persists 20/20 with mean food **59** vs C1 83 vs C5-A 56 vs C4-A 70. Memory writes **~49%** of decisions (vs C4-A 1.3%) without lifting harvest above C5-A. Births 90%; median max generation 1. Numbers: [`c6a_qwen38_27b_smoke`](experiments/reports/c6a_qwen38_27b_smoke/), [`c6a_qwen38_27b_20x200`](experiments/reports/c6a_qwen38_27b_20x200/).
+
+```bash
+python -m emergence_lab batch \
+  --experiment-id c6a_qwen38_27b_20x200 \
+  --seeds 1-20 \
+  --ticks 200 \
+  --controllers random,reactive,llm_evolution_memory \
+  --llm-model qwen3.8:27b \
+  --prompt-id llm_a_evolution_memory \
+  --llm-num-predict 128
+
+# Next ablation: C6-B
+python -m emergence_lab batch \
+  --experiment-id c6b_qwen38_27b_smoke \
+  --seeds 1 \
+  --ticks 50 \
+  --controllers random,reactive,llm_b_evolution_memory \
+  --llm-model qwen3.8:27b \
+  --prompt-id llm_b_evolution_memory \
+  --llm-num-predict 128
+```
+
+**C2-diag** (diagonal linear features) is a separate named experiment — see below. Do not edit v0.1 C2 features in place.
+
+## C2-diag — named experiment (not matrix C2)
+
+Same frozen m1-v2 and linear argmax, but **17 features** (cardinal + diagonal resource/organism bits + bias) → **85** genome weights. Controllers: `evolutionary_diag` (evolved), `evolutionary_diag_oracle` / `evolutionary_diag_oracle_r` (fixed diag-oracle: cardinal food → that move; diagonal food ties the two adjacent cardinals). v0.1 C2 (`evolutionary`, 9 features / 45 weights) is unchanged.
+
+```bash
+# Non-LLM; can run while GPU is busy with C6-B, or after.
+python -m emergence_lab batch \
+  --experiment-id c2diag_oracle_100x1000 \
+  --seeds 1-100 \
+  --ticks 1000 \
+  --controllers reactive,evolutionary,evolutionary_diag,evolutionary_diag_oracle,evolutionary_diag_oracle_r
+```
+
+Compare on the same seeds as the Milestone-1 C2 batches. Do not retune food, regen, mutation, or init.
 
 ## Project layout
 
